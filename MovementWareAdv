@@ -64,7 +64,7 @@ else
     local title = Instance.new("TextLabel", main)
     title.Size = UDim2.new(1, 0, 0, 40)
     title.BackgroundTransparency = 1
-    title.Text = "AUTHENTICATION"
+    title.Text = "key at discord.gg/XNwqCHrS"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 18
