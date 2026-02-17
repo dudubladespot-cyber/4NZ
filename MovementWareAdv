@@ -633,10 +633,10 @@ TabFFlag:CreateButton({
 })
 
 TabCredits:CreateSection("Developers")
-TabCredits:CreateLabel("Main Dev: 2nmnn")
+TabCredits:CreateLabel("Main Dev: 4NZ")
 TabCredits:CreateLabel("Social: https://www.tiktok.com/@2nmnnnnn")
-TabCredits:CreateLabel("Co-Dev: 2nmnn")
-TabCredits:CreateLabel("Social: https://www.tiktok.com/@2nmnnnnn")
+TabCredits:CreateLabel("Co-Dev: E5alR9")
+TabCredits:CreateLabel("Social: https://www.tiktok.com/@e5alr9qub2?_r=1&_t=ZS-93yjebXqZ4j")
 TabCredits:CreateButton({
     Name = "Copy Discord Link",
     Callback = function()
