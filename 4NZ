@@ -1,0 +1,730 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "MovementWare", 
+    LoadingTitle = "Initializing Core...",
+    LoadingSubtitle = "By 4NZ and e5alr9",
+    ConfigurationSaving = {
+        Enabled = true, 
+        Folder = "MovementWareAdv", -- 這是資料夾名稱
+        FileName = "Config"
+    },
+    KeySystem = false, -- 開啟 Key 系統
+    KeySettings = {
+        Title = "Key System",
+        Subtitle = "Enter Key",
+        Note = "key at discord.gg/XNwqCHrS", -- 提示顯示在這裡就好
+        FileName = "MW_Key_Save", -- 這是存 Key 的檔案，我改了名確保是新的
+        SaveKey = true, -- 【重點】設為 true，輸入正確後會自動存檔
+        GrabKeyFromSite = nil, -- 【絕對不要填網址】這裡必須是 nil，否則存檔會壞掉
+        Key = {"4NZ"} -- 密碼設定在這裡
+    }
+})
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+
+local State = {
+    FakeName = "Cocaine",
+    FakeDisplayName = "x",
+    SpoofEnabled = false,
+    ItemOwned = "ColaCooler",
+    ItemTarget = "DualBoneSwords",
+    FogEnabled = false,
+    FogColor = Color3.fromRGB(200, 200, 200),
+    FogRange = 100,
+    Korblox = false,
+    Headless = false,
+    EdgeBoost = false,
+    EdgePower = 95,
+    Spinbot = false,
+    SpinSpeed = 50,
+    AutoBhop = false,
+    JumpHeight = 3,
+    MapID = "487658541",
+    Fullbright = false
+}
+
+getgenv().HeadSlots = {0, 0, 0, 0}
+getgenv().TorsoSlots = {0, 0, 0, 0}
+
+local storedParts = {}
+
+local function isBouncePart(part)
+    if not part then return false end
+    local bounceKeywords = {"bounce", "boost", "launch", "jump", "pad", "ramp", "platform"}
+    local name = string.lower(part.Name)
+    for _, keyword in pairs(bounceKeywords) do
+        if name:find(keyword) then return true end
+    end
+    if part.Parent and (part.Parent:IsA("Model") or part.Parent:IsA("Folder")) then
+        local parentName = string.lower(part.Parent.Name)
+        for _, keyword in pairs(bounceKeywords) do
+            if parentName:find(keyword) then return true end
+        end
+    end
+    return false
+end
+
+local function applyEdgeBoost()
+    if not State.EdgeBoost then return end
+    local char = LP.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    local MIN_Y_VELOCITY_TO_ACTIVATE = 1.0
+    local currentYVelocity = hrp.AssemblyLinearVelocity.Y
+    if currentYVelocity < -MIN_Y_VELOCITY_TO_ACTIVATE then
+        local touchingParts = hrp:GetTouchingParts()
+        local isTouchingBounce = false
+        if #touchingParts > 0 then
+            for _, part in pairs(touchingParts) do
+                if isBouncePart(part) then
+                    isTouchingBounce = true
+                    break
+                end
+            end
+        end
+        if not isTouchingBounce then
+            local currentHorizontalVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
+            local UP_VELOCITY = Vector3.new(0, State.EdgePower, 0)
+            hrp.AssemblyLinearVelocity = currentHorizontalVelocity + UP_VELOCITY
+        end
+    end
+end
+
+local function fix_visuals(v)
+    if not State.SpoofEnabled then return end
+    if v:IsA("TextLabel") then
+        local function upd()
+            if v.Text:find(LP.Name) then v.Text = v.Text:gsub(LP.Name, State.FakeName) end
+            if v.Text == LP.DisplayName or v.Name == "DisplayNameLabel" then v.Text = State.FakeDisplayName end
+        end
+        upd()
+        v:GetPropertyChangedSignal("Text"):Connect(upd)
+    end
+end
+
+local function do_cosmetic_swap()
+    local items = ReplicatedStorage:FindFirstChild("Items")
+    if not items then return end
+    local folder = items:FindFirstChild("Cosmetics")
+    if not folder then return end
+    local targetObj = folder:FindFirstChild(State.ItemOwned)
+    if targetObj then
+        targetObj.Name = State.ItemTarget
+        for _, v in pairs(targetObj:GetChildren()) do
+            if (v:IsA("StringValue") or v:IsA("TextValue")) and (v.Value == State.ItemOwned or v.Name == "DisplayName") then
+                v.Value = State.ItemTarget
+            end
+        end
+        targetObj:SetAttribute("DisplayName", State.ItemTarget)
+        Rayfield:Notify({Title = "Success", Content = "Swapped " .. State.ItemOwned .. " to " .. State.ItemTarget, Duration = 2})
+    else
+        Rayfield:Notify({Title = "Error", Content = "Item not found: " .. State.ItemOwned, Duration = 3})
+    end
+end
+
+local function weld(p0, p1, c0, c1)
+    local w = Instance.new("Weld")
+    w.Part0, w.Part1, w.C0, w.C1, w.Parent = p0, p1, c0, c1, p0
+    return w
+end
+
+local function add_acc(id, pPart)
+    if id == 0 then return end
+    local success, result = pcall(function() return game:GetObjects("rbxassetid://" .. id)[1] end)
+    if not success or not result then return end
+    local a = result
+    a.Parent = Workspace
+    local h = a:FindFirstChild("Handle")
+    if h then
+        h.CanCollide = false
+        local att = h:FindFirstChildOfClass("Attachment")
+        if att then
+            local pA = pPart:FindFirstChild(att.Name, true)
+            if pA then
+                weld(pPart, h, pA.CFrame, att.CFrame)
+            end
+        else
+            weld(pPart, h, CFrame.new(0, 0.5, 0), CFrame.new(0,0,0))
+        end
+    end
+    a.Parent = LP.Character
+end
+
+local function applyKorblox(character)
+    local rightLeg = character:WaitForChild("Right Leg", 10) or character:FindFirstChild("RightUpperLeg")
+    if not rightLeg then return end
+    if State.Korblox then
+        for _, obj in pairs(rightLeg:GetChildren()) do
+            if obj:IsA("CharacterMesh") or obj:IsA("SpecialMesh") then obj:Destroy() end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.Name = "KorbloxMesh"
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.MeshId = "rbxassetid://101851696"
+        mesh.TextureId = "rbxassetid://101851254"
+        mesh.Scale = Vector3.new(1.2, 1.2, 1.2)
+        mesh.Parent = rightLeg
+        rightLeg.BrickColor = BrickColor.new("Really black")
+    else
+        local mesh = rightLeg:FindFirstChild("KorbloxMesh")
+        if mesh then mesh:Destroy() end
+        rightLeg.Transparency = 0
+    end
+end
+
+local function applyHeadless(char)
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = State.Headless and 1 or 0
+        local decal = head:FindFirstChildOfClass("Decal")
+        if decal then decal.Transparency = State.Headless and 1 or 0 end
+    end
+end
+
+local function getIgnoreKeywords()
+    return {"stair", "step", "ramp", "trimp", "platform", "floor", "ground", "bridge", "road", "path", "wedge"}
+end
+
+local function isEssentialPart(name)
+    local keywords = getIgnoreKeywords()
+    name = string.lower(name)
+    for _, keyword in pairs(keywords) do
+        if name:find(keyword) then return true end
+    end
+    return false
+end
+
+local function cleanInvisWalls()
+    local destroyedCount = 0
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("UnionOperation") then
+            local name = string.lower(obj.Name)
+            if isEssentialPart(name) then continue end
+            if name:find("water") or name:find("sea") then
+                pcall(function() obj:Destroy() destroyedCount = destroyedCount + 1 end)
+                continue
+            end
+            if obj.CanCollide == true and obj.Transparency >= 0.8 then
+                if not obj:FindFirstChildOfClass("TouchTransmitter") then
+                    pcall(function() obj:Destroy() destroyedCount = destroyedCount + 1 end)
+                end
+            end
+        end
+    end
+    return destroyedCount
+end
+
+local function getRepairKeywords()
+    return {"stair", "step", "ramp", "trimp", "platform", "invisibleplatform", "floor", "ground", "pad", "road", "path", "bridge", "fence"}
+end
+
+local function isGameplayPart(name)
+    local repairKeywords = getRepairKeywords()
+    name = string.lower(name)
+    for _, keyword in pairs(repairKeywords) do
+        if name:find(keyword) then
+            return true
+        end
+    end
+    return false
+end
+
+local function destroyAndStore()
+    local destroyedCount = 0
+    local storedCount = 0
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("UnionOperation") then
+            local name = string.lower(obj.Name)
+            local shouldDestroy = false
+            
+            if name:find("water") or name:find("sea") then
+                shouldDestroy = true
+            elseif obj.CanCollide and obj.Transparency >= 0.8 and obj.Position.Y > 50 and not isGameplayPart(name) then
+                shouldDestroy = true
+            end
+
+            if shouldDestroy then
+                pcall(function() obj:Destroy(); destroyedCount = destroyedCount + 1 end)
+            end
+
+            if isGameplayPart(name) and obj.CanCollide == true then
+                local newPart = obj:Clone()
+                newPart.Parent = nil
+                table.insert(storedParts, newPart)
+                pcall(function() obj:Destroy() end)
+                storedCount = storedCount + 1
+            end
+        end
+    end
+    return storedCount, destroyedCount
+end
+
+local function restoreStoredParts()
+    local restoredCount = 0
+    local mapParent = Workspace:FindFirstChild("Map") or Workspace:FindFirstChild("Level") or Workspace
+    if not mapParent then return 0 end
+    for _, part in pairs(storedParts) do
+        pcall(function()
+            part.Parent = mapParent
+            restoredCount = restoredCount + 1
+        end)
+    end
+    storedParts = {}
+    return restoredCount
+end
+
+local function runCleanAndFix()
+    local stored, destroyed = destroyAndStore()
+    task.wait(0.2)
+    local restored = restoreStoredParts()
+    if destroyed > 0 or restored > 0 then
+        Rayfield:Notify({
+            Title = "MAP REGENERATION",
+            Content = string.format("Ramp reset: %d. Walls destroyed: %d. Restored: %d.", stored, destroyed, restored),
+            Duration = 6
+        })
+    else
+        Rayfield:Notify({
+            Title = "CLEAN",
+            Content = "No issues found",
+            Duration = 3
+        })
+    end
+end
+
+local function runOverhaul()
+    local destroyed = cleanInvisWalls()
+    Rayfield:Notify({
+        Title = "MAP CLEANED",
+        Content = string.format("Removed %d invisible walls. Stairs & Ramps saved!", destroyed),
+        Duration = 5
+    })
+end
+
+local TabMain = Window:CreateTab("Main")
+local TabCosm = Window:CreateTab("Cosmetics")
+local TabMove = Window:CreateTab("Movement")
+local TabVis = Window:CreateTab("Visuals")
+local TabMap = Window:CreateTab("Map")
+local TabFFlag = Window:CreateTab("FFlag Editor")
+local TabCredits = Window:CreateTab("Credits")
+
+TabMain:CreateSection("Player Survival")
+TabMain:CreateParagraph({ 
+    Title = "Auto Respawn",
+    Content = "Instantly respawns you when downed by firing the server remote."
+})
+TabMain:CreateToggle({
+    Name = "Auto Respawn",
+    CurrentValue = false,
+    Callback = function(v)
+        getgenv().AutoRespawn = v
+        if v then
+            LP.CharacterAdded:Connect(function(c)
+                c:GetAttributeChangedSignal("Downed"):Connect(function()
+                    if getgenv().AutoRespawn and c:GetAttribute("Downed") then
+                        ReplicatedStorage.Events.Player.ChangePlayerMode:FireServer(true)
+                    end
+                end)
+            end)
+        end
+    end,
+})
+TabMain:CreateParagraph({ 
+    Title = "Fix Downed Animation",
+    Content = "Loads a fix for downed animation glitches."
+})
+TabMain:CreateButton({
+    Name = "Fix Downed Animation",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/rukFEvMb"))()
+    end,
+})
+
+TabCosm:CreateSection("Identity Spoofing")
+TabCosm:CreateParagraph({ 
+    Title = "Name Spoofer",
+    Content = "Locally changes your name in chat, leaderboards, and overheads. Purely visual, client-side only."
+})
+TabCosm:CreateInput({Name = "Fake Username", PlaceholderText = "Username...", Callback = function(v) State.FakeName = v end})
+TabCosm:CreateInput({Name = "Fake Display Name", PlaceholderText = "Display Name...", Callback = function(v) State.FakeDisplayName = v end})
+TabCosm:CreateToggle({
+    Name = "Enable Spoofer",
+    CurrentValue = false,
+    Callback = function(v)
+        State.SpoofEnabled = v
+        if v then
+            for _, obj in next, game:GetDescendants() do fix_visuals(obj) end
+            game.DescendantAdded:Connect(fix_visuals)
+        end
+    end,
+})
+TabCosm:CreateSection("Cosmetic Swapper")
+TabCosm:CreateParagraph({ 
+    Title = "Cosmetic Swapper",
+    Content = "Client-side swap for cosmetics. Renames owned item to desired one in Cosmetics folder only. Does not support emotes or unusuals. Only you see it."
+})
+TabCosm:CreateInput({Name = "Item You Own", PlaceholderText = "ColaCooler", Callback = function(v) State.ItemOwned = v end})
+TabCosm:CreateInput({Name = "Item You Want", PlaceholderText = "DualBoneSwords", Callback = function(v) State.ItemTarget = v end})
+TabCosm:CreateButton({Name = "Execute Swap", Callback = function() do_cosmetic_swap() end})
+TabCosm:CreateSection("Custom Accessories")
+TabCosm:CreateParagraph({ 
+    Title = "Custom Accessories",
+    Content = "Loads custom accessories from asset IDs and welds them to head/torso. Client-side only, up to 4 per slot."
+})
+for i = 1, 4 do
+    TabCosm:CreateInput({Name = "Head ID #"..i, PlaceholderText = "ID...", Callback = function(v) getgenv().HeadSlots[i] = tonumber(v) or 0 end})
+end
+for i = 1, 4 do
+    TabCosm:CreateInput({Name = "Torso ID #"..i, PlaceholderText = "ID...", Callback = function(v) getgenv().TorsoSlots[i] = tonumber(v) or 0 end})
+end
+TabCosm:CreateButton({
+    Name = "Spawn Accessories",
+    Callback = function()
+        if LP.Character then
+            for _, id in pairs(getgenv().HeadSlots) do add_acc(id, LP.Character.Head) end
+            local t = LP.Character:FindFirstChild("UpperTorso") or LP.Character:FindFirstChild("Torso")
+            for _, id in pairs(getgenv().TorsoSlots) do if t then add_acc(id, t) end end
+        end
+    end
+})
+
+TabMove:CreateSection("Edge Helper")
+TabMove:CreateParagraph({ 
+    Title = "Edge Trimp",
+    Content = "Boosts upward when falling off non-boost edges."
+})
+TabMove:CreateToggle({ Name = "Enable Edge Trimp", CurrentValue = false, Callback = function(v) State.EdgeBoost = v end })
+TabMove:CreateSlider({
+    Name = "Boost Power",
+    Range = {50, 300},
+    Increment = 5,
+    CurrentValue = 95,
+    Flag = "EdgePower",
+    Callback = function(Value)
+        State.EdgePower = Value
+    end,
+})
+TabMove:CreateSection("Exploits")
+TabMove:CreateParagraph({ 
+    Title = "Spinbot & Auto Bhop",
+    Content = "Spinbot rotates you fast. Auto Bhop auto-jumps while moving."
+})
+TabMove:CreateToggle({Name = "Spinbot", CurrentValue = false, Callback = function(v) State.Spinbot = v end})
+TabMove:CreateSlider({
+    Name = "Spin Speed",
+    Range = {10, 1500},
+    Increment = 10,
+    CurrentValue = 50,
+    Flag = "SpinSpeed",
+    Callback = function(Value)
+        State.SpinSpeed = Value
+    end,
+})
+TabMove:CreateToggle({Name = "Auto Bhop", CurrentValue = false, Callback = function(v) State.AutoBhop = v end})
+TabMove:CreateSlider({
+    Name = "Jump Height",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = 3,
+    Flag = "JumpHeight",
+    Callback = function(Value)
+        State.JumpHeight = Value
+    end,
+})
+TabMove:CreateParagraph({ 
+    Title = "Fly Glitch",
+    Content = "Loads fly glitch script (C/CTRL controls)."
+})
+TabMove:CreateButton({
+    Name = "Fly Glitch (C/CTRL)",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/YcmAV9R4"))()
+    end,
+})
+
+-- =========================
+-- VISUAL EMOTES SYSTEM
+-- =========================
+
+TabVis:CreateSection("Direct Rename Buttons")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- 預先定義好資料夾路徑，方便下面按鈕使用
+local EmotesFolder = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Emotes")
+
+-- [[ 按鈕 1: Rocket -> SwagWalk ]] --
+TabVis:CreateButton({
+    Name = "Rocket -> SwagWalk",
+    Callback = function()
+        -- 嘗試尋找 Rocket，如果存在就改名
+        local item = EmotesFolder:FindFirstChild("Rocket")
+        if item then
+            item.Name = "SwagWalk"
+        end
+    end,
+})
+
+-- [[ 按鈕 2: RockinStride -> Stride ]] --
+TabVis:CreateButton({
+    Name = "RockinStride -> Stride",
+    Callback = function()
+        -- 嘗試尋找 RockinStride，如果存在就改名
+        local item = EmotesFolder:FindFirstChild("RockinStride")
+        if item then
+            item.Name = "Stride"
+        end
+    end,
+})
+
+-- [[ 按鈕 3: Robot ]] --
+TabVis:CreateButton({
+    Name = "Broom -> BumperKart",
+    Callback = function()
+        local item = EmotesFolder:FindFirstChild("Broom")
+        if item then
+            item.Name = "BumperKart" -- 請在此填入你想改成的名字
+        end
+    end,
+})
+
+TabMove:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+    end,
+})
+
+
+TabVis:CreateToggle({Name = "Fullbright", CurrentValue = false, Callback = function(v) State.Fullbright = v end})
+TabVis:CreateSection("Camera FOV")
+TabVis:CreateParagraph({ 
+    Title = "FOV Changer",
+    Content = "Sets custom camera FOV."
+})
+TabVis:CreateInput({
+    Name = "Set FOV (Default 120)",
+    PlaceholderText = "Input Value...",
+    Callback = function(v)
+        local n = tonumber(v)
+        if n and Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = n end
+    end
+})
+TabVis:CreateSection("Fog")
+TabVis:CreateParagraph({ 
+    Title = "Aesthetic Fog",
+    Content = "Adds customizable fog."
+})
+TabVis:CreateToggle({Name = "Enable Aesthetic Fog", CurrentValue = false, Callback = function(v) State.FogEnabled = v end})
+TabVis:CreateSlider({Name = "Fog Range", Range = {0, 1000}, CurrentValue = 100, Callback = function(v) State.FogRange = v end})
+TabVis:CreateColorPicker({Name = "Fog Color", Color = Color3.fromRGB(200, 200, 200), Callback = function(v) State.FogColor = v end})
+TabVis:CreateSection("Local Visuals")
+TabVis:CreateParagraph({ 
+    Title = "Korblox & Headless",
+    Content = "Applies Korblox leg and headless effects locally."
+})
+TabVis:CreateToggle({
+    Name = "Korblox",
+    CurrentValue = false,
+    Callback = function(v)
+        State.Korblox = v
+        if LP.Character then applyKorblox(LP.Character) end
+    end
+})
+TabVis:CreateToggle({
+    Name = "Headless",
+    CurrentValue = false,
+    Callback = function(v)
+        State.Headless = v
+        if LP.Character then applyHeadless(LP.Character) end
+    end
+})
+
+TabMap:CreateSection("Tools")
+TabMap:CreateParagraph({ 
+    Title = "Overhaul Cleaner",
+    Content = "Removes invisible walls while keeping essential parts."
+})
+TabMap:CreateButton({
+    Name = "Remove Invisible Walls",
+    Callback = function()
+        local count = cleanInvisWalls()
+        Rayfield:Notify({Title = "Map Cleaned", Content = "Removed " .. count .. " objects.", Duration = 4})
+    end,
+})
+TabMap:CreateParagraph({
+    Title = "Legacy Cleaner",
+    Content = "Legacy invisible walls remover with part reset."
+})
+TabMap:CreateButton({
+    Name = "Run Legacy Invis Walls Remover",
+    Callback = runCleanAndFix
+})
+TabMap:CreateParagraph({
+    Title = "Overhaul Cleaner",
+    Content = "Advanced invisible walls remover."
+})
+TabMap:CreateButton({
+    Name = "Run Overhaul Invis Walls Remover",
+    Callback = runOverhaul
+})
+TabMap:CreateSection("Loader")
+TabMap:CreateParagraph({ 
+    Title = "Custom Map Loader",
+    Content = "Loads custom map from asset ID above you."
+})
+TabMap:CreateInput({Name = "Map ID", PlaceholderText = "487658541", Callback = function(v) State.MapID = v end})
+TabMap:CreateButton({
+    Name = "Load Custom Map",
+    Callback = function()
+        local s, r = pcall(function() return game:GetObjects("rbxassetid://"..State.MapID)[1] end)
+        if s and r then
+            r.Parent = Workspace
+            if LP.Character then r:MoveTo(LP.Character.HumanoidRootPart.Position + Vector3.new(0,500,0)) end
+        end
+    end,
+})
+TabMap:CreateSection("Nico's Nextbot")
+TabMap:CreateParagraph({ 
+    Title = "Nextbot Maps",
+    Content = "Loads popular Nextbot maps."
+})
+TabMap:CreateButton({Name = "NN_Russia", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/bNTi0yhf"))() end})
+TabMap:CreateButton({Name = "NN_Kellywood", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/9Yn9TBkB"))() end})
+TabMap:CreateButton({Name = "NN_Outpost", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/3f3BE44h"))() end})
+TabMap:CreateButton({Name = "NN_Mall", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/R7A87x4X"))() end})
+TabMap:CreateSection("GMod Maps")
+TabMap:CreateParagraph({ 
+    Title = "GMod Maps",
+    Content = "Loads GMod-inspired maps."
+})
+TabMap:CreateButton({Name = "McDonald's", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/R1fa3jxq"))() end})
+TabMap:CreateButton({Name = "711", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/DKP2qCmZ"))() end})
+TabMap:CreateButton({Name = "GM_Construct", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/35qsYwk0"))() end})
+TabMap:CreateButton({Name = "EVADE X OBBY????????", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/obby"))() end})
+TabMap:CreateSection("Rejoin")
+TabMap:CreateParagraph({ 
+    Title = "Rejoin",
+    Content = "Rejoins the current server."
+})
+TabMap:CreateButton({
+    Name = "Rejoin Server",
+    Callback = function()
+        local ts = game:GetService("TeleportService")
+        ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP)
+    end,
+})
+
+TabFFlag:CreateSection("FFlag Editor (Broken)")
+TabFFlag:CreateParagraph({
+    Title = "Warning",
+    Content = "This feature is currently broken and may not work properly when clicked. Use at your own risk."
+})
+TabFFlag:CreateButton({
+    Name = "Load FFlag Editor",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/luaulover/vWj28Cvn2Qq1abcV8v92mR3v8c2nq9cv3n299V3n8v22/refs/heads/main/bunnysensev2.txt"))()
+    end,
+})
+
+TabCredits:CreateSection("Developers")
+TabCredits:CreateLabel("Main Dev: 4NZ")
+TabCredits:CreateLabel("Social: https://www.tiktok.com/@2nmnnnnn")
+TabCredits:CreateLabel("Co-Dev: E5alR9")
+TabCredits:CreateLabel("Social: https://www.tiktok.com/@e5alr9qub2?_r=1&_t=ZS-93yjebXqZ4j")
+TabCredits:CreateButton({
+    Name = "Copy Discord Link",
+    Callback = function()
+        setclipboard("https://discord.gg/HeSTuTX4")
+        Rayfield:Notify({Title = "Copied!", Content = "Discord link copied to clipboard. Join to get the key!", Duration = 5})
+    end
+})
+TabCredits:CreateLabel("(Please join!)")
+
+local GROUND_CHECK_DISTANCE = 3.5
+local MAX_SLOPE_ANGLE = 45
+
+local function IsOnGround()
+    if not LP.Character then return false end
+    local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+    local hum = LP.Character:FindFirstChild("Humanoid")
+    if not hrp or not hum then return false end
+
+    local state = hum:GetState()
+    if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Swimming then
+        return false
+    end
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LP.Character}
+    raycastParams.IgnoreWater = true
+
+    local rayOrigin = hrp.Position
+    local rayDirection = Vector3.new(0, -GROUND_CHECK_DISTANCE, 0)
+    local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+
+    if not raycastResult then return false end
+
+    local surfaceNormal = raycastResult.Normal
+    local angle = math.deg(math.acos(surfaceNormal:Dot(Vector3.new(0, 1, 0))))
+
+    return angle <= MAX_SLOPE_ANGLE
+end
+
+RunService.RenderStepped:Connect(function()
+    if State.Fullbright then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    end
+    if State.FogEnabled then
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("Atmosphere") then v.Parent = ReplicatedStorage end
+        end
+        Lighting.FogColor = State.FogColor
+        Lighting.FogStart = 0
+        Lighting.FogEnd = State.FogRange
+    else
+        local atm = ReplicatedStorage:FindFirstChildOfClass("Atmosphere")
+        if atm then atm.Parent = Lighting end
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    applyEdgeBoost()
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not LP.Character then return end
+    local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+    local hum = LP.Character:FindFirstChild("Humanoid")
+    if not hrp or not hum then return end
+    if State.Spinbot then
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(State.SpinSpeed), 0)
+    end
+    if State.AutoBhop and hum.MoveDirection.Magnitude > 0 then
+        if IsOnGround() then
+            local jumpPower = math.sqrt(2 * workspace.Gravity * State.JumpHeight)
+            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, jumpPower, hrp.AssemblyLinearVelocity.Z)
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+    applyHeadless(LP.Character)
+end)
+
+LP.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if State.Korblox then applyKorblox(char) end
+    if State.Headless then applyHeadless(char) end
+end)
