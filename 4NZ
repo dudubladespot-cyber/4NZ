@@ -4,20 +4,22 @@ local Window = Rayfield:CreateWindow({
     Name = "MovementWare", 
     LoadingTitle = "Initializing Core...",
     LoadingSubtitle = "By 4NZ and E5alR9",
+    -- ADICIONADO: Configuração da Imagem
+    Image = "rbxassetid://13579133668", -- Substitua o ID abaixo
     ConfigurationSaving = {
         Enabled = true, 
-        Folder = "MovementWareAdv", -- 這是資料夾名稱
+        Folder = "MovementWareAdv", 
         FileName = "Config"
     },
-    KeySystem = false, -- 開啟 Key 系統
+    KeySystem = false, 
     KeySettings = {
         Title = "Key System",
         Subtitle = "Enter Key",
-        Note = "key at discord.gg/XNwqCHrS", -- 提示顯示在這裡就好
-        FileName = "MW_Key_Save", -- 這是存 Key 的檔案，我改了名確保是新的
-        SaveKey = true, -- 【重點】設為 true，輸入正確後會自動存檔
-        GrabKeyFromSite = nil, -- 【絕對不要填網址】這裡必須是 nil，否則存檔會壞掉
-        Key = {"4NZ"} -- 密碼設定在這裡
+        Note = "key at discord.gg/XNwqCHrS", 
+        FileName = "MW_Key_Save", 
+        SaveKey = true, 
+        GrabKeyFromSite = nil, 
+        Key = {"4NZ"} 
     }
 })
 
