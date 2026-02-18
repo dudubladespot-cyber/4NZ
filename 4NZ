@@ -410,12 +410,6 @@ TabCosm:CreateButton({
     end
 })
 
-TabMove:CreateSection("Edge Helper")
-TabMove:CreateParagraph({ 
-    Title = "Edge Trimp",
-    Content = "Boosts upward when falling off non-boost edges."
-})
-
 TabMove:CreateSection("Exploits")
 TabMove:CreateParagraph({ 
     Title = "Spinbot & Auto Bhop",
