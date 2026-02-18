@@ -43,7 +43,7 @@ local State = {
     EdgeBoost = false,
     EdgePower = 95,
     Spinbot = false,
-    SpinSpeed = 50,
+    SpinSpeed = 10,
     AutoBhop = false,
     JumpHeight = 3,
     MapID = "487658541",
@@ -461,6 +461,30 @@ TabMove:CreateButton({
     Name = "Fly Glitch (C/CTRL)",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/YcmAV9R4"))()
+    end,
+})
+
+TabMove:CreateParagraph({ 
+    Title = "edge",
+    Content = "a super jump set 80)."
+})
+
+TabMove:CreateButton({
+    Name = "edge script ",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/zk2zk5kV"))() 
+    end,
+})
+
+TabMove:CreateParagraph({ 
+    Title = "TAS",
+    Content = "TAS script for record your gameplay and play)."
+})
+
+TabMove:CreateButton({
+    Name = "TAS gameplay ",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ImMejor35/Global-TAS/main/lua"))()
     end,
 })
 
