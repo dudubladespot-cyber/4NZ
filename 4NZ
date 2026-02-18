@@ -472,6 +472,18 @@ TabMove:CreateButton({
     end,
 })
 
+TabVis:CreateParagraph({ 
+    Title = "Skin Changer ",
+    Content = "Skin Changer by ۩V͇̿I͇̿P͇̿۩𝖆𝖓𝖌𝖊𝖑۩V͇̿I͇̿P͇)."
+})
+
+TabVis:CreateButton({
+    Name = "Skin Changer  ",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/darkdexv2/universalavatarchanger/main/avatarchanger"))()
+    end,
+})
+
 -- =========================
 -- VISUAL EMOTES SYSTEM
 -- =========================
