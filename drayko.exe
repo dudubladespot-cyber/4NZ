@@ -1,0 +1,113 @@
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local assetId = 17279880951
+
+-----------------------------
+-- 1. TRANSFORMAÇÃO ÚNICA (RODA APENAS 1 VEZ)
+-----------------------------
+-- Usamos uma variável global para o script não tentar processar o mapa todo de novo ao resetar
+if not _G.MapProcessed then
+    G.MapProcessed = true
+    task.spawn(function()
+        local count = 0
+        for , obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                obj.Material = Enum.Material.SmoothPlastic
+                if obj.Transparency == 0 then
+                    obj.Reflectance = 0.6
+                end
+            end
+            count = count + 1
+            if count >= 500 then
+                count = 0
+                task.wait() 
+            end
+        end
+    end)
+end
+
+-----------------------------
+-- 2. LIMPEZA E ASSETID
+-----------------------------
+local function applyLighting()
+    -- Limpa apenas o necessário para não bugar a câmera
+    for , obj in pairs(Lighting:GetChildren()) do
+        if obj:IsA("Sky") or obj:IsA("BloomEffect") or obj:IsA("Atmosphere") or obj:IsA("Clouds") then
+            obj:Destroy()
+        end
+    end
+
+    local success, objects = pcall(function()
+        return game:GetObjects("rbxassetid://" .. assetId)
+    end)
+
+    if success and objects then
+        for , item in ipairs(objects) do
+            item.Parent = Lighting
+        end
+    end
+
+    -- Configurações de Iluminação
+    Lighting.Technology = Enum.Technology.Future
+    Lighting.Brightness = 2.2
+    Lighting.GlobalShadows = true
+    Lighting.OutdoorAmbient = Color3.fromRGB(170, 130, 255)
+    Lighting.Ambient = Color3.fromRGB(90, 90, 110)
+
+    -- Sky de segurança para a cabeça não ficar preta
+    if not Lighting:FindFirstChildOfClass("Sky") then
+        local sky = Instance.new("Sky", Lighting)
+        sky.SkyboxUp = "rbxassetid://159067921"
+        sky.SkyboxBk = "rbxassetid://0"
+        sky.SkyboxDn = "rbxassetid://0"
+        sky.SkyboxFt = "rbxassetid://0"
+        sky.SkyboxLf = "rbxassetid://0"
+        sky.SkyboxRt = "rbxassetid://0"
+        sky.SunAngularSize = 0
+    end
+
+    -- Atmosfera e Nuvens
+    local clouds = Instance.new("Clouds", Workspace.Terrain)
+    clouds.Color = Color3.fromRGB(210, 60, 255)
+    clouds.Cover = 0.8
+
+    local atmosphere = Instance.new("Atmosphere", Lighting)
+    atmosphere.Density = 0.3
+    atmosphere.Color = Color3.fromRGB(150, 60, 255)
+
+    local bloom = Instance.new("BloomEffect", Lighting)
+    bloom.Intensity = 0.5
+    bloom.Threshold = 0.85
+end
+
+applyLighting()
+
+-----------------------------
+-- 3. OUTLINE (SISTEMA SEGURO PARA RESET)
+-----------------------------
+local function addOutline(character)
+    if not character then return end
+    -- Espera o personagem carregar totalmente para não bugar o spawn
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if not humanoid then return end
+
+    -- Remove highlights antigos para não acumular memória
+    for _, old in pairs(character:GetChildren()) do
+        if old:IsA("Highlight") then old:Destroy() end
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "SkinOutline"
+    highlight.FillTransparency = 1
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = character
+end
+
+-- Conecta de forma segura
+player.CharacterAdded:Connect(addOutline)
+if player.Character then addOutline(player.Character) end
