@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "MovementWare", 
     LoadingTitle = "Initializing Core...",
-    LoadingSubtitle = "By L1ght and Milan ",
+    LoadingSubtitle = "By 4NZ and E5alR9",
     -- ADICIONADO: Configuração da Imagem
     Image = "rbxassetid://13579133668", -- Substitua o ID abaixo
     ConfigurationSaving = {
@@ -320,7 +320,9 @@ local TabMap = Window:CreateTab("Map")
 local TabFFlag = Window:CreateTab("FFlag Editor")
 local TabCredits = Window:CreateTab("Credits")
 
+
 TabMain:CreateSection("Player Survival")
+
 TabMain:CreateParagraph({ 
     Title = "Auto Respawn",
     Content = "Instantly respawns you when downed by firing the server remote."
@@ -365,6 +367,7 @@ TabMain:CreateButton({
 })
 
 TabCosm:CreateSection("Identity Spoofing")
+
 TabCosm:CreateParagraph({ 
     Title = "Name Spoofer",
     Content = "Locally changes your name in chat, leaderboards, and overheads. Purely visual, client-side only."
@@ -413,6 +416,8 @@ TabCosm:CreateButton({
 })
 
 TabMove:CreateSection("Exploits")
+
+
 TabMove:CreateParagraph({ 
     Title = "Spinbot & Auto Bhop",
     Content = "Spinbot rotates you fast. Auto Bhop auto-jumps while moving."
@@ -522,14 +527,26 @@ TabVis:CreateButton({
 
 -- [[ 按鈕 3: Robot ]] --
 TabVis:CreateButton({
-    Name = "Broom -> BumperKart",
+    Name = "Broom -> GoofyStride",
     Callback = function()
         local item = EmotesFolder:FindFirstChild("Broom")
         if item then
-            item.Name = "BumperKart" -- 請在此填入你想改成的名字
+            item.Name = "GoofyStride" -- 請在此填入你想改成的名字
         end
     end,
 })
+
+TabVis:CreateButton({
+    Name = "HeadlessBaller -> SnowmobileCruise",
+    Callback = function()
+        local item = EmotesFolder:FindFirstChild("HeadlessBaller")
+        if item then
+            item.Name = "SnowmobileCruise" -- 請在此填入你想改成的名字
+        end
+    end,
+})
+
+
 
 TabMove:CreateButton({
     Name = "Dex",
@@ -545,14 +562,45 @@ TabVis:CreateParagraph({
     Title = "FOV Changer",
     Content = "Sets custom camera FOV."
 })
-TabVis:CreateInput({
-    Name = "Set FOV (Default 120)",
-    PlaceholderText = "Input Value...",
-    Callback = function(v)
-        local n = tonumber(v)
-        if n and Workspace.CurrentCamera then Workspace.CurrentCamera.FieldOfView = n end
-    end
-})
+-- [[ SEÇÃO DE FOV PERSONALIZADA ]] --
+NewSection("FIELD OF VIEW (FOV)")
+
+local Camera = workspace.CurrentCamera
+local TargetFOV = 120
+
+local function SetFOV(value)
+    TargetFOV = value
+    Camera.FieldOfView = value
+    print("FOV alterado para: " .. value)
+end
+
+-- Botões de FOV
+NewButton("FOV: 110 (Padrão Competitivo)", function() SetFOV(110) end)
+NewButton("FOV: 120 (Recomendado)", function() SetFOV(120) end)
+NewButton("FOV: 220 (Extremo)", function() SetFOV(220) end)
+NewButton("FOV: 270 (Quebrado/Quake)", function() SetFOV(270) end)
+
+-- Trava de FOV
+NewToggle("Fixar FOV Selecionado", function(state)
+    getgenv().FixFOV = state
+    task.spawn(function()
+        while getgenv().FixFOV do
+            if Camera.FieldOfView ~= TargetFOV then
+                Camera.FieldOfView = TargetFOV
+            end
+            task.wait(0.1)
+        end
+    end)
+end)
+
+-- [[ SEÇÃO DE FERRAMENTAS ]] --
+NewSection("TOOLS")
+
+-- Botão do Dex Explorer
+NewButton("Dex Explorer", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/dex.lua"))()
+end)
+
 TabVis:CreateSection("Fog")
 TabVis:CreateParagraph({ 
     Title = "Aesthetic Fog",
@@ -583,11 +631,59 @@ TabVis:CreateToggle({
     end
 })
 
+-- [[ FUNÇÕES DE SUPORTE (Obrigatórias para os botões funcionarem) ]] --
+local function cleanInvisWalls()
+    local count = 0
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Transparency >= 0.8 and obj.CanCollide == true then
+            if not obj:FindFirstChildOfClass("TouchTransmitter") then
+                obj:Destroy()
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+local function runCleanAndFix()
+    local count = cleanInvisWalls()
+    Rayfield:Notify({Title = "Legacy Cleaner", Content = "Limpou " .. count .. " objetos.", Duration = 3})
+end
+
+local function runOverhaul()
+    local count = cleanInvisWalls()
+    Rayfield:Notify({Title = "Overhaul", Content = "Limpeza avançada concluída!", Duration = 3})
+end
+
+-- [[ FUNÇÕES DE LIMPEZA - COLE ISSO LOGO ACIMA DA TABMAP ]] --
+local function cleanInvisWalls()
+    local count = 0
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Transparency >= 0.8 and obj.CanCollide == true then
+            if not obj:FindFirstChildOfClass("TouchTransmitter") then
+                obj:Destroy()
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+local function runCleanAndFix()
+    local count = cleanInvisWalls()
+    Rayfield:Notify({Title = "Legacy Cleaner", Content = "Limpou " .. count .. " objetos.", Duration = 3})
+end
+
+local function runOverhaul()
+    local count = cleanInvisWalls()
+    Rayfield:Notify({Title = "Overhaul", Content = "Limpeza avançada concluída!", Duration = 3})
+end
+
+-- [[ ABA MAP ARRUMADA ]] --
+local TabMap = Window:CreateTab("Map")
+
 TabMap:CreateSection("Tools")
-TabMap:CreateParagraph({ 
-    Title = "Overhaul Cleaner",
-    Content = "Removes invisible walls while keeping essential parts."
-})
+
 TabMap:CreateButton({
     Name = "Remove Invisible Walls",
     Callback = function()
@@ -595,63 +691,54 @@ TabMap:CreateButton({
         Rayfield:Notify({Title = "Map Cleaned", Content = "Removed " .. count .. " objects.", Duration = 4})
     end,
 })
-TabMap:CreateParagraph({
-    Title = "Legacy Cleaner",
-    Content = "Legacy invisible walls remover with part reset."
-})
+
 TabMap:CreateButton({
     Name = "Run Legacy Invis Walls Remover",
-    Callback = runCleanAndFix
+    Callback = function() runCleanAndFix() end
 })
-TabMap:CreateParagraph({
-    Title = "Overhaul Cleaner",
-    Content = "Advanced invisible walls remover."
-})
+
 TabMap:CreateButton({
     Name = "Run Overhaul Invis Walls Remover",
-    Callback = runOverhaul
+    Callback = function() runOverhaul() end
 })
+
 TabMap:CreateSection("Loader")
-TabMap:CreateParagraph({ 
-    Title = "Custom Map Loader",
-    Content = "Loads custom map from asset ID above you."
+
+TabMap:CreateInput({
+    Name = "Map ID", 
+    PlaceholderText = "71532913978389", 
+    Callback = function(v) State.MapID = v end
 })
-TabMap:CreateInput({Name = "Map ID", PlaceholderText = "487658541", Callback = function(v) State.MapID = v end})
+
 TabMap:CreateButton({
     Name = "Load Custom Map",
     Callback = function()
         local s, r = pcall(function() return game:GetObjects("rbxassetid://"..State.MapID)[1] end)
         if s and r then
-            r.Parent = Workspace
-            if LP.Character then r:MoveTo(LP.Character.HumanoidRootPart.Position + Vector3.new(0,500,0)) end
+            r.Parent = game.Workspace
+            if game.Players.LocalPlayer.Character then 
+                r:MoveTo(game.Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0,500,0)) 
+            end
+            Rayfield:Notify({Title = "Sucesso", Content = "Mapa carregado!", Duration = 5})
+        else
+            Rayfield:Notify({Title = "Erro", Content = "ID Inválido ou Executor sem suporte", Duration = 5})
         end
     end,
 })
-TabMap:CreateSection("Nico's Nextbot")
-TabMap:CreateParagraph({ 
-    Title = "Nextbot Maps",
-    Content = "Loads popular Nextbot maps."
-})
-TabMap:CreateButton({Name = "NN_Russia", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/bNTi0yhf"))() end})
-TabMap:CreateButton({Name = "NN_Kellywood", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/9Yn9TBkB"))() end})
-TabMap:CreateButton({Name = "NN_Outpost", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/3f3BE44h"))() end})
-TabMap:CreateButton({Name = "NN_Mall", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/R7A87x4X"))() end})
-TabMap:CreateSection("GMod Maps")
-TabMap:CreateParagraph({ 
-    Title = "GMod Maps",
-    Content = "Loads GMod-inspired maps."
-})
-TabMap:CreateButton({Name = "EVADE X OBBY????????", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/obby"))() end})
+
+TabMap:CreateSection("Evade")
+TabMap:CreateButton({Name = "Super_Obby", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/my-maps/refs/heads/main/2NMNN%20super%20obby"))() end})
+TabMap:CreateButton({Name = "Brookhaven", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/4NZ/refs/heads/main/map%20brookhaven"))() end})
+
+TabMap:CreateSection("Another Game Maps")
+TabMap:CreateButton({Name = "GM_Construct", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/35qsYwk0"))() end})
+TabMap:CreateButton({Name = "Brainrot", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/my-maps/refs/heads/main/Brainrotmap"))() end})
+
 TabMap:CreateSection("Rejoin")
-TabMap:CreateParagraph({ 
-    Title = "Rejoin",
-    Content = "Rejoins the current server."
-})
 TabMap:CreateButton({
     Name = "Rejoin Server",
     Callback = function()
-        local ts = game:GetService("TeleportService")
-        ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP)
+        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
     end,
 })
 
@@ -668,9 +755,9 @@ TabFFlag:CreateButton({
 })
 
 TabCredits:CreateSection("Developers")
-TabCredits:CreateLabel("Main Devs: L1ght Milan ")
-TabCredits:CreateLabel("Social: https://www.tiktok.com/@l1ght451")
-TabCredits:CreateLabel("Co-Dev: E5alR9 and 2NMNN")
+TabCredits:CreateLabel("Main Dev: 4NZ")
+TabCredits:CreateLabel("Social: https://www.tiktok.com/@2nmnnnnn")
+TabCredits:CreateLabel("Co-Dev: E5alR9")
 TabCredits:CreateLabel("Social: https://www.tiktok.com/@e5alr9qub2?_r=1&_t=ZS-93yjebXqZ4j")
 TabCredits:CreateButton({
     Name = "Copy Discord Link",
