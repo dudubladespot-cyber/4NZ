@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "MovementWare", 
     LoadingTitle = "Initializing Core...",
-    LoadingSubtitle = "By 4NZ and E5alR9",
+    LoadingSubtitle = "By L1ght and Milan ",
     -- ADICIONADO: Configuração da Imagem
     Image = "rbxassetid://13579133668", -- Substitua o ID abaixo
     ConfigurationSaving = {
@@ -641,9 +641,6 @@ TabMap:CreateParagraph({
     Title = "GMod Maps",
     Content = "Loads GMod-inspired maps."
 })
-TabMap:CreateButton({Name = "McDonald's", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/R1fa3jxq"))() end})
-TabMap:CreateButton({Name = "711", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/DKP2qCmZ"))() end})
-TabMap:CreateButton({Name = "GM_Construct", Callback = function() loadstring(game:HttpGet("https://pastebin.com/raw/35qsYwk0"))() end})
 TabMap:CreateButton({Name = "EVADE X OBBY????????", Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/obby"))() end})
 TabMap:CreateSection("Rejoin")
 TabMap:CreateParagraph({ 
@@ -671,9 +668,9 @@ TabFFlag:CreateButton({
 })
 
 TabCredits:CreateSection("Developers")
-TabCredits:CreateLabel("Main Dev: 4NZ")
-TabCredits:CreateLabel("Social: https://www.tiktok.com/@2nmnnnnn")
-TabCredits:CreateLabel("Co-Dev: E5alR9")
+TabCredits:CreateLabel("Main Devs: L1ght Milan ")
+TabCredits:CreateLabel("Social: https://www.tiktok.com/@l1ght451")
+TabCredits:CreateLabel("Co-Dev: E5alR9 and 2NMNN")
 TabCredits:CreateLabel("Social: https://www.tiktok.com/@e5alr9qub2?_r=1&_t=ZS-93yjebXqZ4j")
 TabCredits:CreateButton({
     Name = "Copy Discord Link",
