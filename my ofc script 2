@@ -1,0 +1,959 @@
+-- [[ 📥 核心負載部署區 (特殊符號裝飾) ]] --
+-- [[ ╔════════════════════════════════════════════════════╗ ]] --
+-- [[ ║  ███████╗███████╗ █████╗ ██╗     ██████╗  █████╗   ║ ]] --
+-- [[ ║  ██╔════╝██╔════╝██╔══██╗██║     ██╔══██╗██╔══██╗  ║ ]] --
+-- [[ ║  █████╗  ███████╗███████║██║     ██████╔╝╚██████║  ║ ]] --
+-- [[ ║  ██╔══╝  ╚════██║██╔══██║██║     ██╔══██╗ ╚═══██║  ║ ]] --
+-- [[ ║  ███████╗███████║██║  ██║███████╗██║  ██║ █████╔╝  ║ ]] --
+-- [[ ╚════════════════════════════════════════════════════╝ ]] --
+
+-- [[ 📥 核心變數初始化 ]]
+_G.fKN = _G.fKN or "PageDown"           
+_G.freezeMS = _G.freezeMS or 300      
+_G.isMinimized = _G.isMinimized or false 
+_G.toggleKey = _G.toggleKey or Enum.KeyCode.R
+_G.spinSpeed = _G.spinSpeed or 10
+_G.freeze = false
+
+local p = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
+local SG = game:GetService("StarterGui")
+local VIM = game:GetService("VirtualInputManager")
+local RS = game:GetService("RunService")
+local VU = game:GetService("VirtualUser")
+local Cam = workspace.CurrentCamera
+local DC_CODE = "PZcXtUk9Sf"
+local DC_URL = "https://discord.gg/" .. DC_CODE
+local BG_IMAGE_ID = "rbxassetid://117164248667049"
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local isPressing = false
+
+local function startSwagMusic()
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local Players = game:GetService("Players")
+
+	local FILE_NAME = "alife_universal.mp3"
+	local DOWNLOAD_URL = "https://raw.githubusercontent.com/E5alR9/E5s/main/alife.mp3"
+
+	-- 📥 [Delta/Xeno 兼容下載]
+	local function getAssetId()
+		if not isfile(FILE_NAME) then
+			print("Executor: Initializing first-time download...")
+			local success, response = pcall(function() return game:HttpGet(DOWNLOAD_URL) end)
+			if success and response then
+				writefile(FILE_NAME, response)
+				print("Executor: Download complete.")
+			else
+				warn("Executor: Download failed. Check connection.")
+				return nil
+			end
+		end
+		
+		local asset = nil
+		local success = pcall(function()
+			asset = getcustomasset(FILE_NAME)
+		end)
+		return success and asset or nil
+	end
+
+	local assetId = getAssetId()
+	if not assetId then return end
+
+	local swagIds = {}
+	-- 🔎 [動作偵測邏輯]
+	task.spawn(function()
+		local emotesFolder = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Emotes")
+		while true do
+			for _, folder in pairs(emotesFolder:GetChildren()) do
+				if folder.Name == "SwagWalk" then
+					local anim = folder:FindFirstChild("AnimationClassic")
+					if anim and anim.AnimationId ~= "" then
+						swagIds[anim.AnimationId] = true
+					end
+				end
+			end
+			task.wait(2)
+		end
+	end)
+
+	local activeSounds = {}
+
+	-- 🔊 [3D 空間音效管理 - Delta/Xeno 強化版]
+	task.spawn(function()
+		print("Audio Engine: Service Started (High Volume Mode)")
+		while true do
+			for _, plr in pairs(Players:GetPlayers()) do
+				local char = plr.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				local hum = char and char:FindFirstChild("Humanoid")
+				
+				if root and hum then
+					local isSwagging = false
+					for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+						if track.Animation and swagIds[track.Animation.AnimationId] then
+							isSwagging = true
+							break
+						end
+					end
+
+					if isSwagging then
+						-- 🚫 [強制清理] 針對 SwagWalk 的官方音樂
+						local originalSound = root:FindFirstChild("EmoteSound")
+						if originalSound then
+							originalSound.Volume = 0 -- 即使刪不掉也先靜音
+							pcall(function() originalSound:Destroy() end)
+						end
+
+						if not activeSounds[plr] then
+							local s = Instance.new("Sound")
+							s.Name = "UniversalSwagTrack"
+							s.SoundId = assetId
+							s.Volume = 3 -- 🔊 最大化音量
+							s.Looped = true
+							s.RollOffMinDistance = 25
+							s.RollOffMaxDistance = 150
+							s.RollOffMode = Enum.RollOffMode.InverseTapered
+							s.Parent = root
+							
+							-- 防止手遊執行器加載過慢
+							task.spawn(function()
+								if not s.IsLoaded then 
+									pcall(function() s.Loaded:Wait() end) 
+								end
+								s:Play()
+							end)
+							
+							activeSounds[plr] = s
+							print("Audio: Playing custom track for " .. plr.Name)
+						end
+					else
+						-- 清理自定義音樂
+						if activeSounds[plr] then
+							local s = activeSounds[plr]
+							pcall(function()
+								s:Stop()
+								s:Destroy()
+							end)
+							activeSounds[plr] = nil
+						end
+					end
+				end
+			end
+			task.wait(0.1) -- 高頻率偵測，確保官方音樂一出現就被靜音/刪除
+		end
+	end)
+end
+
+-- [[ 🔔 系統通知封裝 ]]
+local function notify(title, text, duration)
+    pcall(function()
+        SG:SetCore("SendNotification", {
+            Title = title or "SYSTEM",
+            Text = text or "",
+            Duration = duration or 2,
+            Icon = "rbxassetid://6023426926"
+        })
+    end)
+end
+
+
+-- [[ 🚀 標頭輸出：ANSI 3D 立體斜體 ]]
+local function showHeader()
+    local wall = "///////////////////////////////////////////////////////////////////////////////////"
+    local floor = "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
+    print("\n" .. wall)
+    print([[										
+  ________  ________  ________  ___       ________   _______
+ |\   ____\|\   ____\|\   __  \|\  \     |\   __  \|\   __  \
+ \ \  \___|\ \  \____| \  \|\  \ \  \    \ \  \|\  \ \  \|\  \
+  \ \  \___\\ \_____  \ \   __  \ \  \    \ \  _____\ \_____  \
+   \ \  \__|_\| _____\ \ \  \ \  \ \  \____\ \  \\_ \_|_____\  \
+    \ \_______\ \_______\ \__\ \__\ \_______\ \__\ \ _\\\_______\
+     \|_______|\|_______|\|__|\|__|\|_______|\|__|\|__|\|_______|
+    ]])
+    print(floor)
+    print("|||| \\\\ //// @@@@ [ SYSTEM_OVERRIDE_INITIATED ] @@@@ //// \\\\ ||||")
+    print("|||| OPERATOR : @E5alR9          |||| SECURITY : LEVEL_MAX     ||||")
+    print("|||| STATUS   : OVERCLOCKED      |||| KERNEL   : STABLE        ||||")
+    print(floor)
+    print(wall .. "\n")
+end
+showHeader()
+
+-- [[ 🛠️ 模組一：資源部署 - 雙重詢問版 ]]
+task.spawn(function()
+    print("//// #### [M1] DATA_DEPLOYMENT_START #### ////")
+    _G.emoteSwaps = { { current = "APose", needed = "Broom" } }
+    local function dl(u) 
+        task.spawn(function() 
+            print("\\\\\\\\ HTTP \\\\\\\\ <REQUESTING_REMOTE_PAYLOAD> ...")
+            local s, e = pcall(function() loadstring(game:HttpGet(u))() end) 
+            if s then print("|||| SUCCESS |||| %%% Payload_Injected_Successfully") 
+            else print("|||| ERROR |||| !!! Failure: " .. tostring(e)) end
+        end) 
+    end
+    dl("https://api.luarmor.net/files/v3/loaders/36d5417f898691cb6c6d347b077e01e2.lua")
+    local S = game:GetService("ReplicatedStorage"):WaitForChild("Items")
+    local function dup(folder, old, new) 
+        local i = folder:FindFirstChild(old) 
+        if i then 
+            print("//// CLONE //// " .. old .. " ===>>> " .. new)
+            i:Clone().Parent = folder i.Name = new 
+        end 
+    end
+
+    -- [[ 🔔 詢問 1: Rockin ]]
+    local rockinBind = Instance.new("BindableFunction")
+    rockinBind.OnInvoke = function(answer)
+        if answer == "NO" then
+            dup(S.Emotes, "RockinStride", "Stride")
+        else
+            print("|||| CHOICE: YES |||| Skipping RockinStride")
+        end
+    end
+
+    -- [[ 🔔 詢問 2: Broom ]]
+    local broomBind = Instance.new("BindableFunction")
+    broomBind.OnInvoke = function(answer)
+        if answer == "NO" then
+            dup(S.Emotes, "Broom", "SnowmobileCruise")
+        else
+            print("|||| CHOICE: YES |||| Skipping Broom")
+        end
+    end
+
+    -- 執行通知
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "SYSTEM CHECK";
+            Text = "do u have Rockin? IF YOU R THE FIRST IN SERVER CHOOSE YES";
+            Duration = 99999;
+            Button1 = "YES";
+            Button2 = "NO";
+            Callback = rockinBind;
+        })
+        
+        task.wait(2) -- 稍微延遲避免通知打架
+        
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "SYSTEM CHECK";
+            Text = "do u have Broom?";
+            Duration = 99999;
+            Button1 = "YES";
+            Button2 = "NO";
+            Callback = broomBind;
+        })
+    end)
+
+    -- 無論如何都執行的部分 (Cosmetics)
+    pcall(function()
+        dup(S.Cosmetics, "ToxicInferno", "BorealisAurora")
+
+    end)
+
+    -- 防掛機系統 (保持原樣)
+    p.Idled:Connect(function() 
+        VU:CaptureController() 
+        VU:ClickButton2(Vector2.zero) 
+        print("//// PULSE //// Activity_Heartbeat_Sent")
+    end)
+end)
+
+-- [[ ⚙️ 模組二：引擎同步 ]]
+task.spawn(function()
+    task.wait(1.5) 
+    print("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ [ ENGINE_SYNCHRONIZATION ] ////////////////////")
+    if #game.Players:GetPlayers() == 1 then
+        print("\\\\ CHECK \\\\ Solo_Mode_Active...")
+        local E = game:GetService("ReplicatedStorage"):WaitForChild("Items"):WaitForChild("Emotes")
+        local s, r, b = E:FindFirstChild("Stride"), E:FindFirstChild("RockinStride"), E:FindFirstChild("Broom")
+        
+        if s and r and b then
+            print("\\\\ SYNC \\\\ Overwriting_Classic_Modules...")
+            local bm, rm = b:FindFirstChild("EmoteModuleClassic"), r:FindFirstChild("EmoteModuleClassic")
+            if bm and rm then
+                local nm = bm:Clone()
+                nm:ClearAllChildren()
+                for _, o in ipairs(rm:GetChildren()) do o:Clone().Parent = nm end
+                rm:Destroy()
+                nm.Name, nm.Parent = "EmoteModuleClassic", r
+            end
+            s:ClearAllChildren()
+            for _, i in ipairs(r:GetChildren()) do i:Clone().Parent = s end
+            print("\\\\ DONE \\\\ Deep_Integrity_Check_Pass")
+        end
+    end
+end)
+
+-- [[ 1. 將計數器放在最外面，確保死亡不重置 ]]
+_G.zbClickCount = _G.zbClickCount or 0 
+_G.skyEnabled = _G.skyEnabled or false -- 新增 Sky 狀態追蹤
+_G.headlessClicked = _G.headlessClicked or false
+_G.rightKClicked   = _G.rightKClicked or false
+_G.leftKClicked    = _G.leftKClicked or false
+
+-- [[ 🖥️ 介面處理核心 - 完全整合修正版 ]]
+local function createUI()
+    if p.PlayerGui:FindFirstChild("E5_Console") then p.PlayerGui.E5_Console:Destroy() end
+    local sg = Instance.new("ScreenGui", p.PlayerGui)
+    sg.Name, sg.ResetOnSpawn, sg.DisplayOrder = "E5_Console", false, 999
+    
+    local m = Instance.new("Frame", sg)
+    m.Size = _G.isMinimized and UDim2.new(0, 100, 0, 30) or UDim2.new(0, 400, 0, 430)
+    m.Position = UDim2.new(0, 210, 0, -40) -- 修正座標避免出界
+    m.BackgroundColor3, m.BackgroundTransparency, m.BorderSizePixel = Color3.new(0,0,0), 0.5, 0
+    m.Active, m.Draggable = true, true
+    Instance.new("UICorner", m)
+
+    local bg = Instance.new("ImageLabel", m)
+    bg.Size, bg.Image, bg.ScaleType = UDim2.new(1, 0, 1, 0), BG_IMAGE_ID, Enum.ScaleType.Stretch
+    bg.BackgroundTransparency, bg.Visible = 1, not _G.isMinimized
+
+    local bar = Instance.new("Frame", m)
+    bar.Size, bar.BackgroundColor3, bar.ZIndex = UDim2.new(1, 0, 0, 30), Color3.new(0.05, 0.05, 0.05), 5
+    Instance.new("UICorner", bar)
+    
+    local xBtn = Instance.new("TextButton", bar)
+    xBtn.Size, xBtn.Position, xBtn.Text = UDim2.new(0, 30, 0, 30), UDim2.new(1, -30, 0, 0), "X"
+    xBtn.TextColor3, xBtn.BackgroundTransparency, xBtn.ZIndex, xBtn.TextSize = Color3.new(1, 0.2, 0.2), 1, 6, 18
+    xBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
+
+    local minBtn = Instance.new("TextButton", bar)
+    minBtn.Size, minBtn.Position, minBtn.Text = UDim2.new(0, 30, 0, 30), UDim2.new(1, -60, 0, 0), _G.isMinimized and "+" or "-"
+    minBtn.TextColor3, minBtn.BackgroundTransparency, minBtn.ZIndex, minBtn.TextSize = Color3.new(1, 1, 1), 1, 6, 18
+
+    local content = Instance.new("Frame", m)
+    content.Size = UDim2.new(1, 0, 0, 150)
+    content.Position = UDim2.new(0, 0, 1, -160)
+    content.BackgroundTransparency, content.Visible = 1, not _G.isMinimized
+
+	-- [[ 第一排：LAG TOOL | KEY | SPEED ]]
+
+	-- 1. TOOL 按鈕 (寬度佔 35%)
+	local lagToolBtn = Instance.new("TextButton", content)
+	lagToolBtn.Size, lagToolBtn.Position, lagToolBtn.Text = UDim2.new(0.35, 0, 0, 40), UDim2.new(0.03, 0, 0, 0), "TOOL"
+	lagToolBtn.BackgroundColor3, lagToolBtn.TextColor3, lagToolBtn.BackgroundTransparency = Color3.fromRGB(70, 90, 110), Color3.new(1, 1, 1), 0.5
+	Instance.new("UICorner", lagToolBtn)
+	lagToolBtn.MouseButton1Click:Connect(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/TOOL"))()
+		pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/spin"))() end)
+		notify("TOOL", "Freeze Window & Spin Loaded!")
+	end)
+
+	-- 2. Spin KEY 按鈕 (寬度佔 35%)
+	local spinKeyBtn = Instance.new("TextButton", content)
+	spinKeyBtn.Size, spinKeyBtn.Position = UDim2.new(0.35, 0, 0, 40), UDim2.new(0.40, 0, 0, 0)
+	spinKeyBtn.Text = "KEY:".._G.toggleKey.Name
+	spinKeyBtn.BackgroundColor3, spinKeyBtn.TextColor3, spinKeyBtn.BackgroundTransparency = Color3.new(0,0,0), Color3.new(1,1,1), 0.7
+	Instance.new("UICorner", spinKeyBtn)
+	spinKeyBtn.MouseButton1Click:Connect(function()
+		spinKeyBtn.Text = "..."
+		local con; con = UIS.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.Keyboard then
+				_G.toggleKey = i.KeyCode
+				spinKeyBtn.Text = "KEY:".._G.toggleKey.Name
+				notify("KEYBIND", "Spin Key: ".._G.toggleKey.Name)
+				con:Disconnect()
+			end
+		end)
+	end)
+
+	-- 3. Spin SPEED 輸入框 (寬度佔 20%)
+	local speedBox = Instance.new("TextBox", content)
+	speedBox.Size, speedBox.Position = UDim2.new(0.20, 0, 0, 40), UDim2.new(0.77, 0, 0, 0)
+	speedBox.Text = tostring(_G.spinSpeed or 10)
+	speedBox.PlaceholderText = "SPD"
+	speedBox.BackgroundColor3, speedBox.TextColor3, speedBox.BackgroundTransparency = Color3.new(0,0,0), Color3.new(1, 1, 0), 0.7
+	speedBox.TextSize = 14
+	Instance.new("UICorner", speedBox)
+
+	speedBox.FocusLost:Connect(function(enterPressed)
+		local val = tonumber(speedBox.Text)
+		if val then
+			_G.spinSpeed = val
+			notify("SYSTEM", "Spin Speed set to: " .. _G.spinSpeed)
+		else
+			speedBox.Text = tostring(_G.spinSpeed or 10)
+		end
+	end)
+
+    -- [[ 第二排：PGDN (fKN) | MS ]]
+    local l = Instance.new("TextButton", content)
+    l.Size, l.Position, l.Text = UDim2.new(0.42, 0, 0, 40), UDim2.new(0.05, 0, 0, 50), _G.fKN
+    l.BackgroundColor3, l.TextColor3, l.BackgroundTransparency = Color3.new(0,0,0), Color3.new(1,1,1), 0.7
+    l.MouseButton1Click:Connect(function()
+        l.Text = "..."
+        local con; con = UIS.InputBegan:Connect(function(i) 
+            if i.UserInputType == Enum.UserInputType.Keyboard then 
+                _G.fKN = i.KeyCode.Name; l.Text = _G.fKN; con:Disconnect() 
+                notify("SYSTEM", "Freeze Key: " .. _G.fKN)
+            end 
+        end)
+    end)
+
+    local tb = Instance.new("TextBox", content)
+    tb.Size, tb.Position, tb.Text = UDim2.new(0.42, 0, 0, 40), UDim2.new(0.53, 0, 0, 50), tostring(_G.freezeMS)
+    tb.BackgroundColor3, tb.TextColor3, tb.BackgroundTransparency = Color3.new(0,0,0), Color3.new(1,1,0), 0.7
+    tb.FocusLost:Connect(function()
+        local val = tonumber(tb.Text)
+        if val then _G.freezeMS = val; notify("SYSTEM", "MS: " .. _G.freezeMS) end
+    end)
+
+    -- [[ 第三排：SETFFLAG ]]
+    local fBtn = Instance.new("TextButton", content)
+    fBtn.Size, fBtn.Position, fBtn.Text = UDim2.new(0.42, 0, 0, 40), UDim2.new(0.05, 0, 0, 100), "DisplayFPS(RE)"
+    fBtn.BackgroundColor3, fBtn.TextColor3, fBtn.BackgroundTransparency = Color3.new(0,0,0), Color3.new(0,1,1), 0.7
+    fBtn.MouseButton1Click:Connect(function()
+        pcall(function() setfflag("DebugDisplayFPS", "true") end)
+        game:GetService("TeleportService"):Teleport(game.PlaceId, p)
+    end)
+
+    local sBtn = Instance.new("TextButton", content)
+    sBtn.Size, sBtn.Position, sBtn.Text = UDim2.new(0.42, 0, 0, 40), UDim2.new(0.53, 0, 0, 100), "Missedworld(RE)"
+    sBtn.BackgroundColor3, sBtn.TextColor3, sBtn.BackgroundTransparency = Color3.new(0,0,0), Color3.new(0,1,0), 0.7
+    sBtn.MouseButton1Click:Connect(function()
+        pcall(function() setfflag("MaxMissedWorldStepsRemembered", "2147483467") end)
+        game:GetService("TeleportService"):Teleport(game.PlaceId, p)
+    end)
+
+	-- 配置參數
+    local btnW = 0.22  -- 按鈕寬度
+    local btnH = 35    -- 按鈕高度
+    local gapX = 0.02  -- 橫向間隙
+    local startY = 35  -- 起始 Y 位置
+    local rowGap = 45  -- 每一排的間距 (35 + 10)
+
+    -- 計算 X 位置的函式
+    local function getX(col)
+        return gapX + (col - 1) * (btnW + gapX)
+    end
+
+    -- [[ 第一排 ]]
+
+    -- Zombie (1-1)
+    local zbBtn = Instance.new("TextButton", m) 
+    zbBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    zbBtn.Position = UDim2.new(getX(1), 0, 0, startY) 
+    zbBtn.ZIndex = 10 
+    zbBtn.BackgroundColor3 = Color3.new(0, 0, 0) 
+    zbBtn.BackgroundTransparency = 0.7 
+    zbBtn.Text = "Zombie"
+    zbBtn.TextColor3 = Color3.new(1, 1, 1)
+    zbBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", zbBtn)
+
+    -- Sky (1-2)
+    local skyBtn = Instance.new("TextButton", m)
+    skyBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    skyBtn.Position = UDim2.new(getX(2), 0, 0, startY)
+    skyBtn.ZIndex = 10
+    skyBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    skyBtn.BackgroundTransparency = 0.7
+    skyBtn.Text = "Sky"
+    skyBtn.TextColor3 = Color3.new(1, 1, 1)
+    skyBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", skyBtn)
+
+    -- Bhop (1-3)
+    local bhopBtn = Instance.new("TextButton", m)
+    bhopBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    bhopBtn.Position = UDim2.new(getX(3), 0, 0, startY)
+    bhopBtn.ZIndex = 10
+    bhopBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    bhopBtn.BackgroundTransparency = 0.7
+    bhopBtn.Text = "Bhop"
+    bhopBtn.TextColor3 = Color3.new(1, 1, 1)
+    bhopBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", bhopBtn)
+
+    -- Player (1-4)
+    local playerBtn = Instance.new("TextButton", m)
+    playerBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    playerBtn.Position = UDim2.new(getX(4), 0, 0, startY)
+    playerBtn.ZIndex = 10
+    playerBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    playerBtn.BackgroundTransparency = 0.7
+    playerBtn.Text = "Player"
+    playerBtn.TextColor3 = Color3.new(1, 1, 1)
+    playerBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", playerBtn)
+
+    -- [[ 第二排 ]]
+
+    -- Edge (2-1)
+    local edgeBtn = Instance.new("TextButton", m)
+    edgeBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    edgeBtn.Position = UDim2.new(getX(1), 0, 0, startY + rowGap)
+    edgeBtn.ZIndex = 10
+    edgeBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    edgeBtn.BackgroundTransparency = 0.7
+    edgeBtn.Text = "Edge"
+    edgeBtn.TextColor3 = Color3.new(1, 1, 1)
+    edgeBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", edgeBtn)
+
+    -- Grey Fog (2-2)
+    local fogBtn = Instance.new("TextButton", m)
+    fogBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    fogBtn.Position = UDim2.new(getX(2), 0, 0, startY + rowGap)
+    fogBtn.ZIndex = 10
+    fogBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    fogBtn.BackgroundTransparency = 0.7
+    fogBtn.Text = "Grey Fog"
+    fogBtn.TextColor3 = Color3.new(1, 1, 1)
+    fogBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", fogBtn)
+
+    -- Remove (2-3)
+    local removeBtn = Instance.new("TextButton", m)
+    removeBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    removeBtn.Position = UDim2.new(getX(3), 0, 0, startY + rowGap)
+    removeBtn.ZIndex = 10
+    removeBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    removeBtn.BackgroundTransparency = 0.7
+    removeBtn.Text = "Remove"
+    removeBtn.TextColor3 = Color3.new(1, 1, 1)
+    removeBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", removeBtn)
+
+    -- Headless (2-4) -> 移到第二排最後一格
+    local headlessBtn = Instance.new("TextButton", m)
+    headlessBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    headlessBtn.Position = UDim2.new(getX(4), 0, 0, startY + rowGap) -- 這裡改成了 getX(4)
+    headlessBtn.ZIndex = 10
+    headlessBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    headlessBtn.BackgroundTransparency = 0.7
+    headlessBtn.Text = "Headless"
+    headlessBtn.TextColor3 = Color3.new(1, 1, 1)
+    headlessBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", headlessBtn)
+
+    -- [[ 第三排 ]]
+
+    -- Left Korblox (3-1)
+    local leftKBtn = Instance.new("TextButton", m)
+    leftKBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    leftKBtn.Position = UDim2.new(getX(1), 0, 0, startY + rowGap * 2) -- 換到第 1 欄
+    leftKBtn.ZIndex = 10
+    leftKBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    leftKBtn.BackgroundTransparency = 0.7
+    leftKBtn.Text = "Left Korblox"
+    leftKBtn.TextColor3 = Color3.new(1, 1, 1)
+    leftKBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", leftKBtn)
+
+    -- Right Korblox (3-2)
+    local rightKBtn = Instance.new("TextButton", m)
+    rightKBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    rightKBtn.Position = UDim2.new(getX(2), 0, 0, startY + rowGap * 2) -- 換到第 2 欄
+    rightKBtn.ZIndex = 10
+    rightKBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    rightKBtn.BackgroundTransparency = 0.7
+    rightKBtn.Text = "Right Korblox"
+    rightKBtn.TextColor3 = Color3.new(1, 1, 1)
+    rightKBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", rightKBtn)
+
+	-- [NEW] Renamer (3-3)
+    local renamerBtn = Instance.new("TextButton", m)
+    renamerBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    renamerBtn.Position = UDim2.new(getX(3), 0, 0, startY + rowGap * 2)
+    renamerBtn.ZIndex = 10
+    renamerBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    renamerBtn.BackgroundTransparency = 0.7
+    renamerBtn.Text = "Renamer"
+    renamerBtn.TextColor3 = Color3.new(1, 1, 1)
+    renamerBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", renamerBtn)
+
+    -- [NEW] Shaders (3-4)
+    local shadersBtn = Instance.new("TextButton", m)
+    shadersBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    shadersBtn.Position = UDim2.new(getX(4), 0, 0, startY + rowGap * 2)
+    shadersBtn.ZIndex = 10
+    shadersBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    shadersBtn.BackgroundTransparency = 0.7
+    shadersBtn.Text = "Shaders"
+    shadersBtn.TextColor3 = Color3.new(1, 1, 1)
+    shadersBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", shadersBtn)
+
+	-- [[ 第四排 ]]
+    
+    -- [NEW] Time Control (4-1)
+    local timeCtrlBtn = Instance.new("TextButton", m)
+    timeCtrlBtn.Size = UDim2.new(btnW, 0, 0, btnH)
+    timeCtrlBtn.Position = UDim2.new(getX(1), 0, 0, startY + rowGap * 3) -- 第 4 排，Y增加 rowGap * 3
+    timeCtrlBtn.ZIndex = 10
+    timeCtrlBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+    timeCtrlBtn.BackgroundTransparency = 0.7
+    timeCtrlBtn.Text = "Time Ctrl" -- 可以自行修改文字
+    timeCtrlBtn.TextColor3 = Color3.new(1, 1, 1)
+    timeCtrlBtn.Visible = not _G.isMinimized
+    Instance.new("UICorner", timeCtrlBtn)
+
+	-- [[ 2. 狀態樣式更新函式 (用來變更按鈕外觀) ]]
+    local function updateOneTimeButtons()
+        -- Headless 狀態
+        if _G.headlessClicked then
+            headlessBtn.Text = "DONE"
+            headlessBtn.TextColor3 = Color3.new(0.5, 0.5, 0.5) -- 變灰色
+        else
+            headlessBtn.Text = "Headless"
+            headlessBtn.TextColor3 = Color3.new(1, 1, 1)
+        end
+
+        -- Right Korblox 狀態
+        if _G.rightKClicked then
+            rightKBtn.Text = "DONE"
+            rightKBtn.TextColor3 = Color3.new(0.5, 0.5, 0.5)
+        else
+            rightKBtn.Text = "Right Korblox"
+            rightKBtn.TextColor3 = Color3.new(1, 1, 1)
+        end
+
+        -- Left Korblox 狀態
+        if _G.leftKClicked then
+            leftKBtn.Text = "DONE"
+            leftKBtn.TextColor3 = Color3.new(0.5, 0.5, 0.5)
+        else
+            leftKBtn.Text = "Left Korblox"
+            leftKBtn.TextColor3 = Color3.new(1, 1, 1)
+        end
+    end
+    
+    -- 初始化執行一次，確保按鈕顯示正確的狀態
+    updateOneTimeButtons()
+
+    -- 狀態文字初始化
+    local function updateZbStyle()
+        if _G.zbClickCount == 0 then zbBtn.Text = "Zombie"
+        elseif _G.zbClickCount == 1 then zbBtn.Text = "Violin"
+        else zbBtn.Text = "DONE" zbBtn.TextColor3 = Color3.new(0.5, 0.5, 0.5) end
+    end
+    updateZbStyle()
+
+    local function updateSkyStyle()
+        skyBtn.Text = _G.skyEnabled and "Sky: ON" or "Sky: OFF"
+        skyBtn.TextColor3 = _G.skyEnabled and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
+    end
+    updateSkyStyle()
+
+    -- 點擊事件
+    zbBtn.MouseButton1Click:Connect(function()
+        if _G.zbClickCount >= 2 then return end 
+        _G.zbClickCount = _G.zbClickCount + 1
+        if _G.zbClickCount == 1 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/zb"))() end)
+        elseif _G.zbClickCount == 2 then
+            pcall(function() game:GetService("ReplicatedStorage").Items.Emotes.DeadBoneStride.Name = "SwagWalk" end)
+            task.spawn(startSwagMusic)
+        end
+        updateZbStyle()
+    end)
+
+    if _G.skyState == nil then _G.skyState = 0 end
+
+    skyBtn.MouseButton1Click:Connect(function()
+        if _G.skyState == 1 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/blackhole"))() end)
+        elseif _G.skyState == 2 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/MilkyWay"))() end)
+        elseif _G.skyState == 3 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/Jupiter"))() end)
+        elseif _G.skyState == 4 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/universe"))() end)
+        elseif _G.skyState == 5 then
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/SUN"))() end)
+        end
+
+        _G.skyState = (_G.skyState + 1) % 6
+
+        if _G.skyState == 0 then
+            _G.skyEnabled = false
+        elseif _G.skyState == 1 then
+            _G.skyEnabled = true
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/blackhole"))() end)
+        elseif _G.skyState == 2 then
+            _G.skyEnabled = true
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/MilkyWay"))() end)
+        elseif _G.skyState == 3 then
+            _G.skyEnabled = true
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/Jupiter"))() end)
+        elseif _G.skyState == 4 then
+            _G.skyEnabled = true
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/universe"))() end)
+        elseif _G.skyState == 5 then
+            _G.skyEnabled = true
+            pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/SUN"))() end)
+        end
+
+        if updateSkyStyle then updateSkyStyle() end
+    end)
+
+    playerBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/SnPNQGSf"))() end)
+    end)
+
+	bhopBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/MAJ"))() end)
+    end)
+
+	edgeBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/edge"))() end)
+    end)
+
+	fogBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/GREYFOG"))() end)
+    end)
+
+	removeBtn.MouseButton1Click:Connect(function()
+		pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/removeinvwall"))() end)
+	end)
+
+    timeCtrlBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/timecontrol"))() end)
+    end)
+
+	-- [[ 點擊事件新增 ]]
+    -- [[ 3. 修改後的點擊事件 ]]
+
+    headlessBtn.MouseButton1Click:Connect(function()
+        if _G.headlessClicked then return end -- 如果按過，直接結束
+        _G.headlessClicked = true             -- 標記為已按過
+        
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/headless"))() end)
+        
+        updateOneTimeButtons() -- 更新按鈕外觀
+    end)
+
+    rightKBtn.MouseButton1Click:Connect(function()
+        if _G.rightKClicked then return end
+        _G.rightKClicked = true
+        
+        -- Right 對應 bestkorblox
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/bestkorblox"))() end)
+        
+        updateOneTimeButtons()
+    end)
+
+    leftKBtn.MouseButton1Click:Connect(function()
+        if _G.leftKClicked then return end
+        _G.leftKClicked = true
+        
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/leftkorblox"))() end)
+        
+        updateOneTimeButtons()
+    end)
+
+	-- [NEW] Renamer Click Event
+    renamerBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/Renamer"))() end)
+    end)
+
+    -- [NEW] Shaders Click Event
+    shadersBtn.MouseButton1Click:Connect(function()
+        pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/randomstring0/pshade-ultimate/refs/heads/main/src/back.json"))() end)
+    end)
+
+    minBtn.MouseButton1Click:Connect(function()
+        _G.isMinimized = not _G.isMinimized
+        m.Size = _G.isMinimized and UDim2.new(0, 100, 0, 30) or UDim2.new(0, 400, 0, 430)
+        bg.Visible = not _G.isMinimized
+        content.Visible = not _G.isMinimized
+        zbBtn.Visible = not _G.isMinimized
+        skyBtn.Visible = not _G.isMinimized
+        playerBtn.Visible = not _G.isMinimized
+		bhopBtn.Visible = not _G.isMinimized
+		edgeBtn.Visible = not _G.isMinimized
+		fogBtn.Visible = not _G.isMinimized
+		removeBtn.Visible = not _G.isMinimized
+		headlessBtn.Visible = not _G.isMinimized
+        rightKBtn.Visible = not _G.isMinimized
+        leftKBtn.Visible = not _G.isMinimized
+		renamerBtn.Visible = not _G.isMinimized
+        shadersBtn.Visible = not _G.isMinimized
+		timeCtrlBtn.Visible = not _G.isMinimized
+        minBtn.Text = _G.isMinimized and "+" or "-"
+    end)
+end
+
+-- [[ 全局核心邏輯 ]]
+local UIS = game:GetService("UserInputService")
+local p = game:GetService("Players").LocalPlayer
+
+local function ensureUI()
+    if not p.PlayerGui:FindFirstChild("E5_Console") then
+        createUI()
+    end
+end
+
+ensureUI()
+p.CharacterAdded:Connect(function()
+    task.wait(1) 
+    ensureUI()
+end)
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.Insert then
+        ensureUI()
+    end
+end)
+
+-- [[ 🔄 角色處理：確保重生後無頭與斷腳持續生效 ]]
+local function run(c)
+    if not c then return end
+    
+    -- 1. 處理 UI 控制台 (如果是本地玩家自己)
+    local charPlayer = Players:GetPlayerFromCharacter(c)
+    if charPlayer == lp then
+        task.spawn(function()
+            local gui = lp:WaitForChild("PlayerGui", 10)
+            -- 這裡建議增加檢查 E5_Console 是否存在的邏輯
+            local console = gui:WaitForChild("E5_Console", 5)
+            if console then 
+                console.Enabled = true 
+            end
+        end)
+    end
+end
+
+-- [[ 🚀 角色監控系統 (全服適用) ]]
+local function monitor(plr)
+    -- 監聽該玩家未來每一次的重生 (CharacterAdded)
+    plr.CharacterAdded:Connect(function(char)
+        run(char)
+    end)
+    
+    -- 如果該玩家目前已經在場上，立即執行一次
+    if plr.Character then 
+        task.spawn(run, plr.Character) 
+    end
+end
+
+-- [[ 🏁 系統啟動流程 ]]
+task.spawn(function()
+    print("//// #### [M3] GLOBAL_SYSTEM_RUNNING #### ////")
+
+    -- 1. 針對目前伺服器中已存在的玩家啟動監控
+    for _, plr in ipairs(Players:GetPlayers()) do
+        monitor(plr)
+    end
+    
+    -- 2. 針對後續才加入伺服器的玩家啟動監控
+    Players.PlayerAdded:Connect(monitor)
+end)
+
+-- [[ ⌨️ 輸入偵測核心：啟動與停止 ]]
+
+-- 1. 偵測按下
+UIS.InputBegan:Connect(function(i, processed)
+    if processed then return end 
+    
+    if i.KeyCode.Name == _G.fKN then 
+        _G.freeze = true 
+    end 
+end)
+
+-- 2. 偵測放開 (包含智能重置檢查)
+UIS.InputEnded:Connect(function(i) 
+	if i.KeyCode.Name == _G.fKN then 
+        _G.freeze = false 
+    end 
+end)
+
+-- 2. 物理循環： Freeze
+RS.Heartbeat:Connect(function()
+    local c = p.Character
+    local r = c and c:FindFirstChild("HumanoidRootPart")
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+
+    -- [[ Freeze 核心 (球形觸發版) ]]
+    if _G.freeze and r then
+        local op = OverlapParams.new()
+        op.FilterDescendantsInstances = {c}
+        op.FilterType = Enum.RaycastFilterType.Exclude
+
+        -- 判定：以玩家為中心，半徑 20 單位為範圍的球形偵測
+        if #workspace:GetPartBoundsInRadius(r.Position, 20, op) > 0 then
+            
+            -- 跳出 UI 通知
+            game:GetService("StarterGui"):SetCore("SendNotification", { 
+                Title = "SYSTEM"; 
+                Text = "Freeze: " .. tostring(_G.freezeMS) .. "ms"; 
+                Duration = 0.5; 
+            })
+            
+            -- 執行物理阻斷 (依據 UI 設定的 ms)
+            local t = os.clock() 
+            local delayTime = (tonumber(_G.freezeMS) or 300) / 1000
+            while os.clock() - t < delayTime do end 
+        end
+    end
+end)
+
+-- [[ 修正後的核心旋轉邏輯 ]] --
+RunService.Heartbeat:Connect(function()
+    -- 這裡統一使用 isPressing 和上方定義的 lp (LocalPlayer)
+    if isPressing and lp.Character then
+        local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            -- 使用 pcall 防止 _G.spinSpeed 遺失導致報錯
+            local speed = tonumber(_G.spinSpeed) or 50
+            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(speed), 0)
+        end
+    end
+end)
+
+-- [[ 修正後的按鍵偵測 ]] --
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    -- 確保與 UI 設定的 _G.toggleKey 同步
+    if input.KeyCode == _G.toggleKey then
+        isPressing = true
+        print("\\\\ SYSTEM \\\\ [[ SPIN_HOLD_START ]]")
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    -- 放開時停止
+    if input.KeyCode == _G.toggleKey then
+        isPressing = false
+        print("\\\\ SYSTEM \\\\ [[ SPIN_HOLD_STOP ]]")
+    end
+end)
+
+-- [[ 📡 Module 4: Social Daemon ]]
+task.spawn(function()
+    print("//// [M4] STARTING SOCIAL_DAEMON ////////")
+    local bindable = Instance.new("BindableFunction")
+    bindable.OnInvoke = function(answer)
+        if answer == "YES" then
+            print("|||| [SOCIAL] ACCEPTED ////////")
+            local req = (syn and syn.request) or (http and http.request) or http_request or request
+            if req then pcall(function() req({Url = "http://127.0.0.1:6463/rpc?v=1", Method = "POST", Headers = {["Content-Type"] = "application/json", ["Origin"] = "https://discord.com"}, Body = game:GetService("HttpService"):JSONEncode({cmd = "INVITE_BROWSER", args = {code = DC_CODE}, nonce = game:GetService("HttpService"):GenerateGUID(false)})}) end) end
+            if setclipboard then setclipboard(DC_URL) end
+        elseif answer == "NO" then
+            print("|||| [SOCIAL] DECLINED :-( ////////")
+            task.delay(0.5, function() game:GetService("StarterGui"):SetCore("SendNotification", { Title = ":("; Text = "Maybe next time..."; Duration = 5; }) end)
+        end
+    end
+    local function sendInvite()
+        return pcall(function() game:GetService("StarterGui"):SetCore("SendNotification", { Title = "E5alR9 - DISCORD", Text = "Join discord? pls join to ask me If u dont know how to use", Duration = 99999, Button1 = "YES", Button2 = "NO", Callback = bindable }) end)
+    end
+    task.wait(5)
+    local sent = false
+    repeat sent = sendInvite() if not sent then task.wait(2) end until sent == true
+end)
+
+task.wait()
+print("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ ALL SYSTEMS LOADED | @E5ALR9 ////////////////////")
+print("//// [SYSTEM] READY TO OPERATE AT RING-0 ////")
+-- APPEND
+loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/MAJ"))()
+game:GetService("ReplicatedStorage").Items.Emotes.Writhing.Name = "Xylobone"
+game:GetService("ReplicatedStorage").Items.Cosmetics.AngelicRedemption.Name = "EclipseCrown"
+game:GetService("ReplicatedStorage").Items.Cosmetics.FrostFlame.Name = "NorthernStarRadiance"
