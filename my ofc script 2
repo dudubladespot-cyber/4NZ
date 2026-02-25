@@ -1,185 +1,401 @@
--- [[ 📥 核心負載部署區 (特殊符號裝飾) ]] --
--- [[ ╔════════════════════════════════════════════════════╗ ]] --
--- [[ ║  ██████╗ ███╗   ██╗███╗   ███╗███╗   ██╗███╗   ██╗ ║ ]] --
--- [[ ║  ╚════██╗████╗  ██║████╗ ████║████╗  ██║████╗  ██║ ║ ]] --
--- [[ ║   █████╔╝██╔██╗ ██║██╔████╔██║██╔██╗ ██║██╔██╗ ██║ ║ ]] --
--- [[ ║  ██╔═══╝ ██║╚██╗██║██║╚██╔╝██║██║╚██╗██║██║╚██╗██║ ║ ]] --
--- [[ ║  ███████╗██║ ╚████║██║ ╚═╝ ██║██║ ╚████║██║ ╚████║ ║ ]] --
--- [[ ╚════════════════════════════════════════════════════╝ ]] --
-
--- [[ 📥 核心變數初始化 ]]
-_G.fKN = _G.fKN or "PageDown"           
-_G.freezeMS = _G.freezeMS or 300      
-_G.isMinimized = _G.isMinimized or false 
-_G.toggleKey = _G.toggleKey or Enum.KeyCode.R
-_G.spinSpeed = _G.spinSpeed or 10
-_G.freeze = false
-
-local p = game:GetService("Players").LocalPlayer
-local UIS = game:GetService("UserInputService")
-local SG = game:GetService("StarterGui")
-local VIM = game:GetService("VirtualInputManager")
-local RS = game:GetService("RunService")
-local VU = game:GetService("VirtualUser")
-local Cam = workspace.CurrentCamera
-local DC_CODE = "E8KaduH8" -- LINK ATUALIZADO
-local DC_URL = "https://discord.gg/" .. DC_CODE
-local BG_IMAGE_ID = "rbxassetid://117164248667049"
+-- [[ SERVIÇOS ]] --
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
+local LP = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local isPressing = false
+local TweenService = game:GetService("TweenService")
 
-local function startSwagMusic()
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local Players = game:GetService("Players")
+-- [[ CONFIGURAÇÕES GERAIS ]] --
+-- IDs INVERTIDOS CONFORME SOLICITADO
+local MAIN_BG_ID = "rbxassetid://106403125400938"
+local RENAMER_BG_ID = "rbxassetid://97722128714338"
 
-	local FILE_NAME = "alife_universal.mp3"
-	local DOWNLOAD_URL = "https://raw.githubusercontent.com/E5alR9/E5s/main/alife.mp3"
+local autoJumpActive = false
+local spacePressed = false
 
-	-- 📥 [Delta/Xeno 兼容下載]
-	local function getAssetId()
-		if not isfile(FILE_NAME) then
-			print("Executor: Initializing first-time download...")
-			local success, response = pcall(function() return game:HttpGet(DOWNLOAD_URL) end)
-			if success and response then
-				writefile(FILE_NAME, response)
-				print("Executor: Download complete.")
-			else
-				warn("Executor: Download failed. Check connection.")
-				return nil
+local function ApplyCorner(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 6)
+	corner.Parent = obj
+end
+
+local function ApplyStroke(obj)
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 1.8
+	stroke.Color = Color3.fromRGB(0, 0, 0)
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = obj
+end
+
+-- ==========================================
+-- LÓGICA DE EFEITOS
+-- ==========================================
+
+local function CreateAuraRainbow()
+	local char = LP.Character or LP.CharacterAdded:Wait()
+	local folder = Instance.new("Folder", char)
+	folder.Name = "RainbowAura_Effect"
+
+	local e = Instance.new("Part", folder)
+	e.Size, e.CanCollide, e.Massless, e.Material = Vector3.new(1,1,1), false, true, Enum.Material.Neon
+	local f = Instance.new("SpecialMesh", e)
+	f.MeshType, f.MeshId, f.Scale = Enum.MeshType.FileMesh, "rbxassetid://3270017", Vector3.new(4, 0.5, 4)
+	local g = Instance.new("Weld", e)
+	g.Part0, g.Part1 = e, char:WaitForChild("Head")
+
+	local h = Instance.new("Part", folder)
+	h.Size, h.CanCollide, h.Massless, h.Transparency = Vector3.new(1,1,1), false, true, 1
+	local i = Instance.new("Weld", h)
+	i.Part0, i.Part1, i.C0 = h, char:WaitForChild("HumanoidRootPart"), CFrame.new(0, -3, 0)
+
+	local j = Instance.new("ParticleEmitter", h)
+	j.Texture, j.Rate, j.Lifetime = "rbxassetid://1472591136", 300, NumberRange.new(2, 4)
+	j.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 10), NumberSequenceKeypoint.new(1, 0)})
+	j.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0), NumberSequenceKeypoint.new(0.8, 0), NumberSequenceKeypoint.new(1, 1)})
+	j.LightEmission, j.EmissionDirection = 1, Enum.NormalId.Top
+
+	local l = Instance.new("PointLight", char.HumanoidRootPart)
+	l.Range, l.Brightness = 15, 3
+
+	local m = Instance.new("Part", folder)
+	m.Size, m.CanCollide, m.Material = Vector3.new(1,1,1), false, Enum.Material.Neon
+	local n = Instance.new("SpecialMesh", m)
+	n.MeshId, n.Scale = "rbxassetid://1938002622", Vector3.new(5, 5, 5)
+	local o = Instance.new("Weld", m)
+	o.Part0, o.Part1 = m, char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+
+	local q = Instance.new("Trail", m)
+	local r, s = Instance.new("Attachment", m), Instance.new("Attachment", m)
+	r.Position, s.Position = Vector3.new(0, 2, 0), Vector3.new(0, -2, 0)
+	q.Attachment0, q.Attachment1, q.Lifetime, q.LightEmission = r, s, 0.5, 1
+
+	local t = 0
+	RunService.RenderStepped:Connect(function(dt)
+	t = t + dt
+	local color = Color3.fromHSV(tick() % 3 / 3, 1, 1)
+	if e.Parent then e.Color = color end
+	if m.Parent then m.Color = color end
+	if j.Parent then j.Color = ColorSequence.new(color) end
+	if l.Parent then l.Color = color end
+	if q.Parent then q.Color = ColorSequence.new(color) end
+	if g.Parent then g.C0 = CFrame.new(0, -2.5 - math.sin(t * 3) * 0.5, 0) * CFrame.Angles(0, t * 1.5, 0) end
+end)
+end
+
+local function FlashStrikeGhost()
+	local assetId = 107791749595680
+	local char = LP.Character or LP.CharacterAdded:Wait()
+	local root = char:WaitForChild("HumanoidRootPart")
+	local success, model = pcall(function() return game:GetObjects("rbxassetid://" .. assetId)[1] end)
+	if success and model then
+		model.Parent = game.Lighting
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+				local clone = obj:Clone(); clone.Parent = root
+				if clone:IsA("ParticleEmitter") then clone.Enabled = true end
 			end
 		end
-		
-		local asset = nil
-		local success = pcall(function()
-			asset = getcustomasset(FILE_NAME)
-		end)
-		return success and asset or nil
+		model:Destroy()
+	end
+end
+
+-- ==========================================
+-- LÓGICA DO AUTO JUMP
+-- ==========================================
+UserInputService.InputBegan:Connect(function(input, processed)
+if processed then return end
+if input.KeyCode == Enum.KeyCode.Space then spacePressed = true end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+if input.KeyCode == Enum.KeyCode.Space then spacePressed = false end
+end)
+
+RunService.Heartbeat:Connect(function()
+if autoJumpActive and spacePressed then
+	local character = LP.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 and humanoid.FloorMaterial ~= Enum.Material.Air then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end
+end)
+
+-- ==========================================
+-- LÓGICA DO ITEM RENAMER
+-- ==========================================
+local function OpenItemRenamer()
+	if _G.RenamerUI_Instance and _G.RenamerUI_Instance.Parent then
+		_G.RenamerUI_Instance:Destroy()
+		_G.RenamerUI_Instance = nil
+		return
 	end
 
-	local assetId = getAssetId()
-	if not assetId then return end
+	local ITEMS_FOLDER = ReplicatedStorage:WaitForChild("Items", 5)
+	local CATEGORIES = {
+	Emotes = ITEMS_FOLDER and ITEMS_FOLDER:FindFirstChild("Emotes"),
+	Cosmetics = ITEMS_FOLDER and ITEMS_FOLDER:FindFirstChild("Cosmetics")
+	}
 
-	local swagIds = {}
-	-- 🔎 [動作偵測邏輯]
-	task.spawn(function()
-		local emotesFolder = ReplicatedStorage:WaitForChild("Items"):WaitForChild("Emotes")
-		while true do
-			for _, folder in pairs(emotesFolder:GetChildren()) do
-				if folder.Name == "SwagWalk" then
-					local anim = folder:FindFirstChild("AnimationClassic")
-					if anim and anim.AnimationId ~= "" then
-						swagIds[anim.AnimationId] = true
-					end
-				end
-			end
-			task.wait(2)
-		end
-	end)
+	local currentCategory = "Emotes"
+	local targetItem = nil
+	local sourceName = nil
 
-	local activeSounds = {}
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name = "EnglishRenamer_WithBackground"
+	_G.RenamerUI_Instance = ScreenGui
 
-	-- 🔊 [3D 空間音效管理 - Delta/Xeno 強化版]
-	task.spawn(function()
-		print("Audio Engine: Service Started (High Volume Mode)")
-		while true do
-			for _, plr in pairs(Players:GetPlayers()) do
-				local char = plr.Character
-				local root = char and char:FindFirstChild("HumanoidRootPart")
-				local hum = char and char:FindFirstChild("Humanoid")
-				
-				if root and hum then
-					local isSwagging = false
-					for _, track in pairs(hum:GetPlayingAnimationTracks()) do
-						if track.Animation and swagIds[track.Animation.AnimationId] then
-							isSwagging = true
-							break
-						end
-					end
+	if syn and syn.protect_gui then
+		syn.protect_gui(ScreenGui)
+		ScreenGui.Parent = CoreGui
+	elseif gethui then
+		ScreenGui.Parent = gethui()
+	else
+		ScreenGui.Parent = CoreGui
+	end
 
-					if isSwagging then
-						-- 🚫 [強制清理] 針對 SwagWalk 的官方音樂
-						local originalSound = root:FindFirstChild("EmoteSound")
-						if originalSound then
-							originalSound.Volume = 0 -- 即使刪不掉也先靜音
-							pcall(function() originalSound:Destroy() end)
-						end
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Name = "MainFrame"
+	MainFrame.Size = UDim2.new(0, 450, 0, 380)
+	MainFrame.Position = UDim2.new(0.5, -225, 0.5, -190)
+	MainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+	MainFrame.BackgroundTransparency = 1
+	MainFrame.Active = true
+	MainFrame.Draggable = true
+	MainFrame.Parent = ScreenGui
+	ApplyCorner(MainFrame, 10)
 
-						if not activeSounds[plr] then
-							local s = Instance.new("Sound")
-							s.Name = "UniversalSwagTrack"
-							s.SoundId = assetId
-							s.Volume = 3 -- 🔊 最大化音量
-							s.Looped = true
-							s.RollOffMinDistance = 25
-							s.RollOffMaxDistance = 150
-							s.RollOffMode = Enum.RollOffMode.InverseTapered
-							s.Parent = root
-							
-							-- 防止手遊執行器加載過慢
-							task.spawn(function()
-								if not s.IsLoaded then 
-									pcall(function() s.Loaded:Wait() end) 
-								end
-								s:Play()
-							end)
-							
-							activeSounds[plr] = s
-							print("Audio: Playing custom track for " .. plr.Name)
-						end
-					else
-						-- 清理自定義音樂
-						if activeSounds[plr] then
-							local s = activeSounds[plr]
-							pcall(function()
-								s:Stop()
-								s:Destroy()
-							end)
-							activeSounds[plr] = nil
-						end
-					end
-				end
-			end
-			task.wait(0.1) -- 高頻率偵測，確保官方音樂一出現就被靜音/刪除
-		end
-	end)
+	local BgImage = Instance.new("ImageLabel")
+	BgImage.Name = "BackgroundImage"
+	BgImage.Size = UDim2.new(1, 0, 1, 0)
+	BgImage.Image = RENAMER_BG_ID
+	BgImage.ScaleType = Enum.ScaleType.Stretch
+	BgImage.BackgroundTransparency = 0
+	BgImage.ZIndex = 0
+	BgImage.Parent = MainFrame
+	ApplyCorner(BgImage, 10)
+
+	local Title = Instance.new("TextLabel")
+	Title.Size = UDim2.new(1, -40, 0, 40)
+	Title.Position = UDim2.new(0, 15, 0, 0)
+	Title.BackgroundTransparency = 1
+	Title.Text = "Item Renamer"
+	Title.TextColor3 = Color3.new(1, 1, 1)
+	Title.Font = Enum.Font.GothamBold
+	Title.TextSize = 24
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.ZIndex = 2
+	Title.Parent = MainFrame
+
+	local CloseBtn = Instance.new("TextButton")
+	CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+	CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+	CloseBtn.BackgroundTransparency = 1
+	CloseBtn.Text = "X"
+	CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+	CloseBtn.Font = Enum.Font.GothamBold
+	CloseBtn.ZIndex = 2
+	CloseBtn.Parent = MainFrame
+	ApplyCorner(CloseBtn, 6)
+	ApplyStroke(CloseBtn)
+
+	CloseBtn.MouseButton1Click:Connect(function()
+	_G.RenamerUI_Instance = nil
+	ScreenGui:Destroy()
+end)
+
+local function ApplyStyle(btn)
+	btn.BackgroundTransparency = 1
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 18
+	btn.ZIndex = 2
+	ApplyCorner(btn, 6)
+	ApplyStroke(btn)
 end
 
--- [[ 🔔 系統通知封裝 ]]
-local function notify(title, text, duration)
-    pcall(function()
-        SG:SetCore("SendNotification", {
-            Title = title or "SYSTEM",
-            Text = text or "",
-            Duration = duration or 2,
-            Icon = "rbxassetid://6023426926"
-        })
-    end)
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(0.92, 0, 0, 45)
+TabContainer.Position = UDim2.new(0.04, 0, 0.12, 0)
+TabContainer.BackgroundTransparency = 1
+TabContainer.ZIndex = 2
+TabContainer.Parent = MainFrame
+
+local EmoteTab = Instance.new("TextButton")
+EmoteTab.Size = UDim2.new(0.48, 0, 1, 0)
+EmoteTab.Text = "Emotes"; EmoteTab.Parent = TabContainer; ApplyStyle(EmoteTab)
+
+local CosmeticTab = Instance.new("TextButton")
+CosmeticTab.Size = UDim2.new(0.48, 0, 1, 0)
+CosmeticTab.Position = UDim2.new(0.52, 0, 0, 0)
+CosmeticTab.Text = "Cosmetics"; CosmeticTab.Parent = TabContainer; ApplyStyle(CosmeticTab)
+
+local LeftDropBtn = Instance.new("TextButton")
+LeftDropBtn.Size = UDim2.new(0.44, 0, 0, 45)
+LeftDropBtn.Position = UDim2.new(0.04, 0, 0.28, 0)
+LeftDropBtn.Text = "Select Target"; LeftDropBtn.Parent = MainFrame; ApplyStyle(LeftDropBtn)
+
+local RightDropBtn = Instance.new("TextButton")
+RightDropBtn.Size = UDim2.new(0.44, 0, 0, 45)
+RightDropBtn.Position = UDim2.new(0.52, 0, 0.28, 0)
+RightDropBtn.Text = "Select Name"; RightDropBtn.Parent = MainFrame; ApplyStyle(RightDropBtn)
+
+local PreviewBox = Instance.new("TextBox")
+PreviewBox.Size = UDim2.new(0.92, 0, 0, 35)
+PreviewBox.Position = UDim2.new(0.04, 0, 0.54, 0)
+PreviewBox.BackgroundTransparency = 1
+PreviewBox.TextColor3 = Color3.new(0.5, 1, 1)
+PreviewBox.Font = Enum.Font.Code
+PreviewBox.TextSize = 11
+PreviewBox.ClearTextOnFocus = false
+PreviewBox.TextEditable = false
+PreviewBox.ZIndex = 2
+PreviewBox.Parent = MainFrame
+ApplyCorner(PreviewBox, 6)
+ApplyStroke(PreviewBox)
+
+local function CreateDropdownList(parentBtn)
+	local Scroll = Instance.new("ScrollingFrame")
+	Scroll.Size = UDim2.new(1, 0, 4.5, 0)
+	Scroll.Position = UDim2.new(0, 0, 1.1, 0)
+	Scroll.BackgroundColor3 = Color3.new(0, 0, 0)
+	Scroll.BackgroundTransparency = 0.2
+	Scroll.Visible = false
+	Scroll.ZIndex = 20
+	Scroll.Parent = parentBtn
+	ApplyCorner(Scroll, 6)
+	Instance.new("UIListLayout", Scroll).SortOrder = Enum.SortOrder.LayoutOrder
+	return Scroll
 end
 
+local LeftList = CreateDropdownList(LeftDropBtn)
+local RightList = CreateDropdownList(RightDropBtn)
 
--- [[ 🚀 標頭輸出：ANSI 3D 立體斜體 ]]
-local function showHeader()
-    local wall = "///////////////////////////////////////////////////////////////////////////////////"
-    local floor = "\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
-    print("\n" .. wall)
-    print([[										
-  ___  ███╗   ██╗███╗   ███╗███╗   ██╗███╗   ██╗
- ╚══╝  ████╗  ██║████╗ ████║████╗  ██║████╗  ██║
-  ███╗ ██╔██╗ ██║██╔████╔██║██╔██╗ ██║██╔██╗ ██║
- ██╔══╝██║╚██╗██║██║╚██╔╝██║██║╚██╗██║██║╚██╗██║
- ███████║ ╚████║██║ ╚═╝ ██║██║ ╚████║██║ ╚████║
- ╚══════╝  ╚═══╝╚═╝     ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝
-    ]])
-    print(floor)
-    print("|||| \\\\ //// @@@@ [ SYSTEM_OVERRIDE_INITIATED ] @@@@ //// \\\\ ||||")
-    print("|||| OPERATOR : @2NMNN          |||| SECURITY : LEVEL_MAX     ||||")
-    print("|||| STATUS   : OVERCLOCKED      |||| KERNEL   : STABLE        ||||")
-    print(floor)
-    print(wall .. "\n")
+local ApplyBtn = Instance.new("TextButton")
+ApplyBtn.Size = UDim2.new(0.92, 0, 0, 55)
+ApplyBtn.Position = UDim2.new(0.04, 0, 0.72, 0)
+ApplyBtn.Text = "RENAME ITEM"; ApplyBtn.Parent = MainFrame; ApplyStyle(ApplyBtn)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, 0, 0, 25)
+StatusLabel.Position = UDim2.new(0, 0, 0.90, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Ready"
+StatusLabel.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+StatusLabel.ZIndex = 2
+StatusLabel.Parent = MainFrame
+
+local function RefreshLists()
+	for _, v in pairs(LeftList:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+	for _, v in pairs(RightList:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+	local folder = CATEGORIES[currentCategory]
+	if not folder then return end
+	local items = folder:GetChildren()
+	table.sort(items, function(a, b) return a.Name < b.Name end)
+	LeftList.CanvasSize = UDim2.new(0, 0, 0, #items * 35)
+	RightList.CanvasSize = UDim2.new(0, 0, 0, #items * 35)
+	for _, item in ipairs(items) do
+		local function CreateEntry(list, isTarget)
+			local btn = Instance.new("TextButton", list)
+			btn.Size = UDim2.new(1, 0, 0, 35)
+			btn.BackgroundTransparency = 1
+			btn.Text = item.Name
+			btn.TextColor3 = Color3.new(1, 1, 1)
+			btn.ZIndex = 21
+			btn.MouseButton1Click:Connect(function()
+			if isTarget then targetItem = item; LeftDropBtn.Text = item.Name else sourceName = item.Name; RightDropBtn.Text = item.Name end
+			list.Visible = false
+		end)
+	end
+	CreateEntry(LeftList, true); CreateEntry(RightList, false)
 end
-showHeader()
+end
 
--- Restante do seu script original...
+local function SwitchTab(cat)
+	currentCategory = cat; targetItem = nil; sourceName = nil
+	LeftDropBtn.Text = "Select " .. cat; RightDropBtn.Text = "Select Name"
+	LeftList.Visible = false; RightList.Visible = false
+	RefreshLists()
+end
+
+LeftDropBtn.MouseButton1Click:Connect(function() LeftList.Visible = not LeftList.Visible; RightList.Visible = false end)
+RightDropBtn.MouseButton1Click:Connect(function() RightList.Visible = not RightList.Visible; LeftList.Visible = false end)
+EmoteTab.MouseButton1Click:Connect(function() SwitchTab("Emotes") end)
+CosmeticTab.MouseButton1Click:Connect(function() SwitchTab("Cosmetics") end)
+
+ApplyBtn.MouseButton1Click:Connect(function()
+if not targetItem or not sourceName then StatusLabel.Text = "Selection Missing!"; return end
+local success, err = pcall(function() targetItem.Name = sourceName end)
+if success then StatusLabel.Text = "Success!"; RefreshLists() else StatusLabel.Text = "Error!"; warn(err) end
+end)
+
+SwitchTab("Emotes")
+end
+
+-- ==========================================
+-- MENU PRINCIPAL 2NMNN
+-- ==========================================
+local ScreenGuiM = Instance.new("ScreenGui", CoreGui)
+local MainM = Instance.new("Frame", ScreenGuiM)
+MainM.Size = UDim2.new(0, 500, 0, 310)
+MainM.Position = UDim2.new(0.05, 0, 0.3, 0)
+MainM.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainM.Active = true; MainM.Draggable = true
+ApplyCorner(MainM, 10)
+
+local BgM = Instance.new("ImageLabel", MainM)
+BgM.Size = UDim2.new(1, 0, 1, 0); BgM.Image = MAIN_BG_ID; BgM.BackgroundTransparency = 0.3; BgM.ZIndex = 1
+ApplyCorner(BgM, 10)
+
+local LeftSide = Instance.new("Frame", MainM)
+LeftSide.Size = UDim2.new(0.5, 0, 1, 0); LeftSide.BackgroundTransparency = 1; LeftSide.ZIndex = 10
+
+local RightSide = Instance.new("ScrollingFrame", MainM)
+RightSide.Size = UDim2.new(0.5, 0, 1, -40); RightSide.Position = UDim2.new(0.5, 0, 0, 40); RightSide.BackgroundTransparency = 1; RightSide.ZIndex = 10; RightSide.ScrollBarThickness = 0; RightSide.CanvasSize = UDim2.new(0,0,1.8,0)
+
+local function QuickBtn(txt, pos, color, parent, func)
+	local b = Instance.new("TextButton", parent)
+	b.Size = UDim2.new(0.9, 0, 0, 35); b.Position = pos; b.Text = txt
+	b.BackgroundTransparency = 1
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.Font = Enum.Font.GothamBold; b.ZIndex = 11; b.TextSize = 13
+	ApplyCorner(b, 6)
+	ApplyStroke(b)
+	b.MouseButton1Click:Connect(function() func(b) end)
+	return b
+end
+
+-- [[ ABA ESQUERDA ]] --
+QuickBtn("TIME CONTROL", UDim2.new(0.05, 0, 0, 50), nil, LeftSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/my-maps/refs/heads/main/time%20control"))() end)
+QuickBtn("CLEAN WALLS", UDim2.new(0.05, 0, 0, 100), nil, LeftSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/removeinvwall"))() end)
+QuickBtn("ITEM RENAMER", UDim2.new(0.05, 0, 0, 150), nil, LeftSide, function() OpenItemRenamer() end)
+
+-- [[ ABA DIREITA ]] --
+QuickBtn("BROOKHAVEN", UDim2.new(0.05, 0, 0, 10), nil, RightSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/4NZ/refs/heads/main/map%20brookhaven"))() end)
+QuickBtn("SUPER OBBY", UDim2.new(0.05, 0, 0, 55), nil, RightSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/dudubladespot-cyber/my-maps/refs/heads/main/2NMNN%20super%20obby"))() end)
+QuickBtn("SKIN CHANGER", UDim2.new(0.05, 0, 0, 100), nil, RightSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/darkdexv2/universalavatarchanger/main/avatarchanger"))() end)
+
+local JumpToggle = QuickBtn("SPACE JUMP: OFF", UDim2.new(0.05, 0, 0, 145), nil, RightSide, function(self)
+autoJumpActive = not autoJumpActive
+self.Text = autoJumpActive and "SPACE JUMP: ON" or "SPACE JUMP: OFF"
+local s = self:FindFirstChildOfClass("UIStroke")
+if s then s.Color = autoJumpActive and Color3.fromRGB(50, 255, 50) or Color3.new(0,0,0) end
+end)
+
+local Divider = Instance.new("Frame", RightSide)
+Divider.Size = UDim2.new(0.9, 0, 0, 2); Divider.Position = UDim2.new(0.05, 0, 0, 195); Divider.BackgroundColor3 = Color3.new(1,1,1); Divider.BackgroundTransparency = 0.5; Divider.BorderSizePixel = 0
+
+local CosmeticLabel = Instance.new("TextLabel", RightSide)
+CosmeticLabel.Size = UDim2.new(0.9, 0, 0, 30); CosmeticLabel.Position = UDim2.new(0.05, 0, 0, 205); CosmeticLabel.Text = "COSMETICS"; CosmeticLabel.TextColor3 = Color3.new(0.8, 0.8, 0.8); CosmeticLabel.Font = Enum.Font.GothamBold; CosmeticLabel.TextSize = 14; CosmeticLabel.BackgroundTransparency = 1
+
+QuickBtn("HEADLESS", UDim2.new(0.05, 0, 0, 240), nil, RightSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/headless"))() end)
+QuickBtn("KORBLOX", UDim2.new(0.05, 0, 0, 285), nil, RightSide, function() loadstring(game:HttpGet("https://raw.githubusercontent.com/E5alR9/E5s/refs/heads/main/bestkorblox"))() end)
+QuickBtn("RAINBOW AURA", UDim2.new(0.05, 0, 0, 330), nil, RightSide, function() CreateAuraRainbow() end)
+QuickBtn("FLASH STRIKE", UDim2.new(0.05, 0, 0, 375), nil, RightSide, function() FlashStrikeGhost() end)
+
+local MiniM = Instance.new("TextButton", MainM)
+MiniM.Size = UDim2.new(0, 30, 0, 30); MiniM.Position = UDim2.new(1, -35, 0, 5); MiniM.Text = "-"; MiniM.BackgroundTransparency = 1; MiniM.TextColor3 = Color3.new(1,1,1); MiniM.ZIndex = 15; ApplyCorner(MiniM, 6); ApplyStroke(MiniM)
+MiniM.MouseButton1Click:Connect(function() ScreenGuiM.Enabled = false end)
+LP.CharacterAdded:Connect(function() task.wait(1); ScreenGuiM.Enabled = true end)
